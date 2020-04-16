@@ -224,9 +224,7 @@ echo -n "==> Creating and using directory $SCRIPT_DIR: "
 ssh-keygen -f sshkey -q -N ""
 SSH_KEY="sshkey.pub"
 
-#wget -q --show-progress "$IMAGE_URL"
-cp /opt/$IMAGE .
-
+wget -q --show-progress "$IMAGE_URL"
 wget -q --show-progress "$CLIENT_URL"
 tar -xf "$CLIENT" && rm -f README.md "$CLIENT"
 wget -q --show-progress "$INSTALLER_URL"
