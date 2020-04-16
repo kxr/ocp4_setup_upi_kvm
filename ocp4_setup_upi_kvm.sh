@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 # This script automates the procedure described here:
 # https://kxr.me/2019/08/17/openshift-4-upi-install-libvirt-kvm/
 
@@ -36,7 +37,7 @@ VIR_NET_CREATE_OCT="133"
 DNS_DIR="/etc/NetworkManager/dnsmasq.d"
 
 # Cluster's base domain and name
-BASE_DOM="lab.kxr.me"
+BASE_DOM="local"
 CLUSTER_NAME="ou4"
 
 
@@ -56,7 +57,6 @@ VM_DIR="/var/lib/libvirt/images"
 SCRIPT_DIR="/root/ocp4_setup_${CLUSTER_NAME}-${OCP_VER}.${OCP_MINOR}-$(date +%d%b%Y_%H%M)"
 
 #############################################################################################
-set -e
 
 echo 
 echo "### BASIC LIBVIRT CHECKS ###"
@@ -73,6 +73,9 @@ echo "==> Checking if we have all the required binaries: "
         builtin type -P $x &> /dev/null || { echo "ERROR: $x Not found"; exit 1; }
         echo "  $x: ok"
     done
+echo -n "==> Checking if the pull-secret is there: "
+    test -n "$PULL_SEC" || { echo "ERROR: Didn't get the pull-secret"; exit 1; }
+    echo "ok"
 echo -n "==> Checking if we need to create a new libvirt network: "
     if [ "$VIR_NET_CREATE" == "yes" ]
     then
