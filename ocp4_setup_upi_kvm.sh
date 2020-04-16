@@ -15,16 +15,17 @@ RHCOS_MINOR="latest"
 
 # Number of Masters and Workers Nodes
 N_MAST="3"
-N_WORK="5"
+N_WORK="2"
 
 # Libvirt network to use see `virsh net-list`
+# Set this if you want to use exisitng libvirt network (also set VIR_NET_CREATE="no")
 VIR_NET=""
 # Set this to yes if you want this script to create a new libvirt network
 VIR_NET_CREATE="yes"
 # Pick a random subnet octet (192.168.XXX.0) for this network
 # The network will be created by the name ocp-XXX
 # Only used if VIR_NET_CREATE="yes"
-VIR_NET_CREATE_OCT="135"
+VIR_NET_CREATE_OCT="133"
 
 # If you are using NetworkManager’s embedded dnsmasq, set it to “/etc/NetworkManager/dnsmasq.d”.
 # If you are using NetworkManager’s embedded dnsmasq, make sure dnsmasq in NetworkManager is enabled,
@@ -40,6 +41,8 @@ CLUSTER_NAME="ou4"
 
 
 # Pull Secret
+# Download the pull secret and provide the file here.
+# The Pull secret can be downloaded from: https://cloud.redhat.com/openshift/install/metal/user-provisioned
 PULL_SEC=$(cat /root/pull-secret)
 
 
