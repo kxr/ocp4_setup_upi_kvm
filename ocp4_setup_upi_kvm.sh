@@ -586,13 +586,17 @@ echo "==> Waiting for Boostraping to finish: "
     do
         sleep 30
         api_stat=$(./oc get --raw / &> /dev/null && echo "UP" || echo "DOWN")
-        sys_load=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "w | sed 's/.*load average: \(.*\), .*,.*/\1/;t;d'")
-        pod_imgs=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo podman images | grep -v '^REPOSITORY' | wc -l")
-        cri_cont=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo crictl ps | grep -v '^CONTAINER' | wc -l")
-        btk_stat=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo systemctl is-active bootkube.service") || break
+        sys_load=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "w | sed 's/.*load average: \(.*\), .*,.*/\1/;t;d'") || true
+        pod_imgs=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo podman images | grep -v '^REPOSITORY' | wc -l") || true
+        cri_cont=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo crictl ps | grep -v '^CONTAINER' | wc -l") || true
+        btk_stat=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo systemctl is-active bootkube.service") || true
         echo "Load = $sys_load, Images = $pod_imgs, Containers = $cri_cont, BootKube = $btk_stat, API=$api_stat"
+        test "$btk_stat" = "" -a "$api_stat" = "UP" && break
     done
     echo "ok"
+
+./openshift-install --dir=install_dir wait-for bootstrap-complete
+
 
 echo "==> Removing Boostrap VM: "
     virsh destroy ${CLUSTER_NAME}-bootstrap
