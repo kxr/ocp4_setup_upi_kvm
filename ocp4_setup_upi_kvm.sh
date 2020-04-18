@@ -158,6 +158,12 @@ cat << EOF | column -L -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 -d, --cluster-domain DOMAIN|OpenShift 4 cluster domain
 |Default: local
 
+-m, --masters N|Number of masters to deploy
+|Default: 3
+
+-w, --worker N|Number of workers to deploy
+|Default: 2
+
 -n, --libvirt-network NETWORK|The libvirt network to use. Select this option if you want to use an existing libvirt network.
 |The libvirt network should already exist. If you want the script to create a separate network for this installation see: -N, --libvirt-oct
 |Default: default
@@ -200,13 +206,29 @@ EOF
 echo
 echo "Examples:"
 echo
+echo "# Deploy OpenShift 4.3.12 cluster"
 echo "${0} --ocp-version 4.3.12"
+echo "${0} -O 4.3.12"
 echo 
+echo "# Deploy OpenShift 4.3.12 cluster with RHCOS 4.3.0"
+echo "${0} --ocp-version 4.3.12 --rhcos-version 4.3.0"
+echo "${0} -O 4.3.12 -R 4.3.0"
+echo 
+echo "# Deploy latest OpenShift version with pull secret from a custom location"
 echo "${0} --pull-secret /home/knaeem/Downloads/pull-secret --ocp-version latest"
+echo "${0} -p /home/knaeem/Downloads/pull-secret -O latest"
 echo 
-echo "${0} --cluster-name ocp43 --cluster-domain lab.test.com --pull-secret /home/knaee/Downloads/pull-secret --ocp-version 4.2.latest"
+echo "# Deploy OpenShift 4.2.latest with custom cluster name and domain"
+echo "${0} --cluster-name ocp43 --cluster-domain lab.test.com --ocp-version 4.2.latest"
+echo "${0} -c ocp43 -d lab.test.com -O 4.2.latest"
 echo
+echo "# Deploy OpenShift 4.2.stable on new libvirt network (192.168.155.0/24)"
+echo "${0} --ocp-version 4.2.stable --libvirt-oct 155"
+echo "${0} -O 4.2.stable -N 155"
+echo 
+echo "# Destory the already installed cluster"
 echo "${0} --cluster-name ocp43 --cluster-domain lab.test.com --destroy-installation"
+echo "${0} -c ocp43 -d lab.test.com --destroy-installation"
 echo
 exit
 fi
@@ -248,11 +270,14 @@ if [ "$CLEANUP" == "yes" ]; then
     done
 
     if [ -n "$VIR_NET_OCT" ]; then
-        check_if_we_can_continue "Deleting libvirt network ocp-${VIR_NET_OCT}"
-        echo -n "XXXX> Deleting libvirt network ocp-${VIR_NET_OCT}: "
-        virsh net-destroy "ocp-${VIR_NET_OCT}" > /dev/null || err "virsh net-destroy ocp-${VIR_NET_OCT} failed"
-        virsh net-undefine "ocp-${VIR_NET_OCT}" > /dev/null || err "virsh net-undefine ocp-${VIR_NET_OCT} failed"
-        ok
+        virsh net-uuid "ocp-${VIR_NET_OCT}" &> /dev/null
+        if [ "$?" == "0" ]; then
+            check_if_we_can_continue "Deleting libvirt network ocp-${VIR_NET_OCT}"
+            echo -n "XXXX> Deleting libvirt network ocp-${VIR_NET_OCT}: "
+            virsh net-destroy "ocp-${VIR_NET_OCT}" > /dev/null || err "virsh net-destroy ocp-${VIR_NET_OCT} failed"
+            virsh net-undefine "ocp-${VIR_NET_OCT}" > /dev/null || err "virsh net-undefine ocp-${VIR_NET_OCT} failed"
+            ok
+        fi
     fi
 
     if [ -d "$SCRIPT_DIR" ]; then
@@ -866,9 +891,19 @@ while true; do
 done
 ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" true || err "SSH to lb.${CLUSTER_NAME}.${BASE_DOM} failed"; ok
 
+
+
+echo 
+echo "###############################"
+echo "#### OPENSHIFT BOOTSTRAPING ###"
+echo "###############################"
+echo 
+
 export KUBECONFIG="install_dir/auth/kubeconfig"
 
+
 echo "====> Waiting for Boostraping to finish: "
+echo "(Monitoring activity on bootstrap.${CLUSTER_NAME}.${BASE_DOM})"
 a_dones=()
 a_conts=()
 a_images=()
@@ -882,7 +917,7 @@ while true; do
         ./oc get --raw / &> /dev/null && \
             { echo "  ==> Kubernetes API is Up"; s_api="Up"; output_flag=1; } || true
     else
-        nodes=($(./oc get nodes | grep -v "^NAME" | awk '{print $1 "_" $2}' 2> /dev/null )) || true
+        nodes=($(./oc get nodes 2> /dev/null | grep -v "^NAME" | awk '{print $1 "_" $2}' )) || true
         for n in ${nodes[@]}; do
             if [[ ! " ${a_nodes[@]} " =~ " ${n} " ]]; then
                 echo "  --> Node $(echo $n | tr '_' ' ')"
@@ -891,7 +926,7 @@ while true; do
             fi
         done
     fi
-    images=($(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo podman images | grep -v '^REPOSITORY' | awk '{print \$1 \"-\" \$3}'" 2> /dev/null )) || true
+    images=($(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo podman images 2> /dev/null | grep -v '^REPOSITORY' | awk '{print \$1 \"-\" \$3}'" )) || true
     for i in ${images[@]}; do
         if [[ ! " ${a_images[@]} " =~ " ${i} " ]]; then
             echo "  --> Image Downloaded: ${i}"
@@ -899,7 +934,7 @@ while true; do
             a_images+=( "${i}" )
         fi
     done
-    dones=($(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "ls /opt/openshift/*.done 2> /dev/null" 2> /dev/null )) || true
+    dones=($(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "ls /opt/openshift/*.done 2> /dev/null" )) || true
     for d in ${dones[@]}; do
         if [[ ! " ${a_dones[@]} " =~ " ${d} " ]]; then
             echo "  --> Phase Completed: $(echo $d | sed 's/.*\/\(.*\)\.done/\1/')"
@@ -907,7 +942,7 @@ while true; do
             a_dones+=( "${d}" )
         fi
     done
-    conts=($(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo crictl ps -a | grep -v '^CONTAINER' | rev | awk '{print \$4 \"_\" \$2 \"_\" \$3}' | rev" 2> /dev/null)) || true
+    conts=($(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo crictl ps -a 2> /dev/null | grep -v '^CONTAINER' | rev | awk '{print \$4 \"_\" \$2 \"_\" \$3}' | rev" )) || true
     for c in ${conts[@]}; do
         if [[ ! " ${a_conts[@]} " =~ " ${c} " ]]; then
             echo "  --> Container: $(echo $c | tr '_' ' ')"
@@ -916,7 +951,7 @@ while true; do
         fi
     done
 
-    btk_stat=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo systemctl is-active bootkube.service" 2> /dev/null) || true
+    btk_stat=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo systemctl is-active bootkube.service 2> /dev/null" ) || true
     test "$btk_stat" = "active" -a "$btk_started" = "0" && btk_started=1 || true
 
     test "$output_flag" = "0" && no_output_counter=$(( $no_output_counter + 1 )) || no_output_counter=0
@@ -950,25 +985,21 @@ ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" \
     "sed -i '/bootstrap\.${CLUSTER_NAME}\.${BASE_DOM}/d' /etc/haproxy/haproxy.cfg" || err "failed"
 ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl restart haproxy" || err "failed"; ok
 
-echo -n "====> Waiting for configs.imageregistry: "
-while true
-do
-    sleep 5
-    ./oc get configs.imageregistry.operator.openshift.io cluster &> /dev/null && break || continue
-done; ok
-
-echo -n "====> Patching imageregistry to use emptyDir for storage: "
-./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}' || \
-    err "Failed to patch configs.imageregistry.operator.openshift.io cluster";
-
 echo "====> Waiting for clusterversion: "
+imgreg_patched=0
 while true
 do
-    sleep 30
-    cv_prog_msg=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Progressing")].message}') || continue
-    cv_avail=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Available")].status}') || continue
-    echo "  $cv_prog_msg"
+    cv_prog_msg=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Progressing")].message} 2> /dev/null ') || continue
+    cv_avail=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Available")].status} 2> /dev/null ') || continue
+    echo "  --> $cv_prog_msg"
+
+    if [ "$imgreg_patched" == "0" ]; then
+        ./oc get configs.imageregistry.operator.openshift.io cluster &> /dev/null && \
+            { ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}';  imgreg_patched=1; } || true
+    fi
+
     test "$cv_avail" = "True" && break
+    sleep 30
 done
 
 END_TS=$(date +%s)
