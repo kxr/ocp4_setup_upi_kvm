@@ -989,8 +989,8 @@ echo "====> Waiting for clusterversion: "
 imgreg_patched=0
 while true
 do
-    cv_prog_msg=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Progressing")].message} 2> /dev/null ') || continue
-    cv_avail=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Available")].status} 2> /dev/null ') || continue
+    cv_prog_msg=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Progressing")].message}' 2> /dev/null) || continue
+    cv_avail=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Available")].status}' 2> /dev/null) || continue
     echo "  --> $cv_prog_msg"
 
     if [ "$imgreg_patched" == "0" ]; then
