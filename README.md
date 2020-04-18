@@ -7,6 +7,7 @@
 
 | Option  |Description   |
 | :------------ | :------------ |
+|______________________________||
 | -O, --ocp-version VERSION | You can set this to "latest", "stable" or a specific version like "4.1", "4.1.2", "4.1.latest", "4.1.stable" etc.<br>Default: stable |
 | -R, --rhcos-version VERSION | You can set a specific RHCOS version to use. For example "4.1.0", "4.2.latest" etc.<br>By default the RHCOS version is matched from the OpenShift version. For example, if you selected 4.1.2  RHCOS 4.1/latest will be used |
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /root/pull-secret |
