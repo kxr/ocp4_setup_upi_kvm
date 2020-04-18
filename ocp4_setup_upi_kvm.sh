@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+
 # This script automates the procedure described here:
 # https://kxr.me/2019/08/17/openshift-4-upi-install-libvirt-kvm/
 
