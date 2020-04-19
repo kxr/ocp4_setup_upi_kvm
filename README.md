@@ -1,5 +1,13 @@
 # OpenShift 4 Automated Cluster Installation (UPI on KVM) Script
 
+### Prerequistes:
+
+- Internet connected physical host running a modern linux distribution
+- Virtualization enabled and Libvirt/KVM setup
+- DNS on the host managed by dnsmasq or NetworkManager/dnsmasq
+- OpenShift 4 Pull secret
+
+
 ### Usage:
 ./ocp4_setup_upi_kvm.sh [OPTIONS]
 
