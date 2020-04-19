@@ -1013,7 +1013,7 @@ do
     fi
 
     if [ "$output_delay" -gt 8 ]; then
-        echo -n ${cv_prog_msg:0:70}; test -n "${cv_prog_msg:71}" && echo " ..." || echo
+        echo -n "  --> ${cv_prog_msg:0:70}"; test -n "${cv_prog_msg:71}" && echo " ..." || echo
         output_delay=0
     fi
 
