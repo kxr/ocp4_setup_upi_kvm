@@ -1,6 +1,6 @@
 #!/bin/bash
-# This script automates the procedure described here:
-# https://kxr.me/2019/08/17/openshift-4-upi-install-libvirt-kvm/
+# https://github.com/kxr/ocp4_setup_upi_kvm
+
 set -e
 START_TS=$(date +%s)
 
@@ -236,6 +236,7 @@ fi
 ok() {
     test -z "$1" && echo "ok" || echo "$1"
 }
+
 check_if_we_can_continue() {
     if [ "$YES" != "yes" ]; then
         echo;
@@ -985,21 +986,41 @@ ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" \
     "sed -i '/bootstrap\.${CLUSTER_NAME}\.${BASE_DOM}/d' /etc/haproxy/haproxy.cfg" || err "failed"
 ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl restart haproxy" || err "failed"; ok
 
+
+echo 
+echo "#################################"
+echo "#### OPENSHIFT CLUSTERVERSION ###"
+echo "#################################"
+echo 
+
 echo "====> Waiting for clusterversion: "
 imgreg_patched=0
+output_delay=0
 while true
 do
     cv_prog_msg=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Progressing")].message}' 2> /dev/null) || continue
     cv_avail=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Available")].status}' 2> /dev/null) || continue
-    echo "  --> $cv_prog_msg"
 
     if [ "$imgreg_patched" == "0" ]; then
         ./oc get configs.imageregistry.operator.openshift.io cluster &> /dev/null && \
-            { ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}';  imgreg_patched=1; } || true
+       {
+            sleep 30
+            output_delay=0
+            echo -n '  --> Patching image registry to use EmptyDir: ';
+            ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}' && \
+                imgreg_patched=1 || \
+                    true
+        } || true        
+    fi
+
+    if [ "$output_delay" -gt 8 ]; then
+        echo -n ${cv_prog_msg:0:70}; test -n "${cv_prog_msg:71}" && echo " ..." || echo
+        output_delay=0
     fi
 
     test "$cv_avail" = "True" && break
-    sleep 30
+    output_delay=$(( output_delay + 1 ))
+    sleep 15
 done
 
 END_TS=$(date +%s)
