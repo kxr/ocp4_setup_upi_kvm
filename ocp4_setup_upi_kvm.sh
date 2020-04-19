@@ -1008,8 +1008,7 @@ do
             output_delay=0
             echo -n '  --> Patching image registry to use EmptyDir: ';
             ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}' && \
-                imgreg_patched=1 || \
-                    true
+                imgreg_patched=1 || true
         } || true        
     fi
 
