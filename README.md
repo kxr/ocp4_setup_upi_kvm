@@ -5,6 +5,7 @@
 - Internet connected physical host running a modern linux distribution
 - Virtualization enabled and Libvirt/KVM setup
 - DNS on the host managed by dnsmasq or NetworkManager/dnsmasq
+- OpenShift 4 Pull secret
 
 
 ### Usage:
