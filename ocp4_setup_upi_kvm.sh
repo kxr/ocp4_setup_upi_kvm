@@ -57,10 +57,6 @@ case $key in
     shift
     shift
     ;;
-    --libvirt-net-recreate)
-    VIR_NET_RECREATE="yes"
-    shift
-    ;;
     -c|--cluster-name)
     CLUSTER_NAME="$2"
     shift
@@ -99,7 +95,7 @@ case $key in
     KEEP_BS="yes"
     shift
     ;;
-    --destroy-installation)
+    --destroy)
     CLEANUP="yes"
     shift
     ;;
@@ -172,9 +168,6 @@ cat << EOF | column -L -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 |The network will be named ocp-{OCTET}. If the libvirt network ocp-{OCTET} already exists, the script will fail unless --libvirt-network-recreate is specified
 |Default: <not set>
 
---libvirt-network-recreate|Set this if you want the script to delete and recreate the ocp-{OCTET} network if it already exists
-|Default: <not set>
-
 -v, --vm-dir|The location where you want to store the VM Disks
 |Default: /var/lib/libvirt/images
 
@@ -198,7 +191,7 @@ cat << EOF | column -L -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 -y, --yes|Set this for the script to be non-interactive and continue with out asking for confirmation
 |Default: <not set>
 
---destroy-installation|Set this if you want the script to destroy everything it has created.
+--destroy|Set this if you want the script to destroy everything it has created.
 |Use this option with the same options you used to install the cluster.
 |Be carefull this deletes the VMs, DNS entries and the libvirt network (if created by the script)
 |Default: <not set>
@@ -261,6 +254,12 @@ download() {
 
 
 if [ "$CLEANUP" == "yes" ]; then
+
+    echo 
+    echo "##################"
+    echo "####  DESTROY  ###"
+    echo "##################"
+    echo 
 
     for vm in $(virsh list --all --name | grep "${CLUSTER_NAME}-lb\|${CLUSTER_NAME}-master-\|${CLUSTER_NAME}-worker-\|${CLUSTER_NAME}-bootstrap"); do
         check_if_we_can_continue "Deleting VM $vm"
@@ -420,8 +419,6 @@ if [ -n "$VIR_NET_OCT" -a "$VIR_NET_RECREATE" != "yes" ]; then
         err "libvirt network ocp-${VIR_NET_OCT} already exists" "You can delete this network by running:" \
             "   # virsh net-destroy ocp-${VIR_NET_OCT}" \
             "   # virsh net-undefine ocp-${VIR_NET_OCT}" \
-            "" \
-            "Or, you can use -O $VIR_NET_OCT to force recreation" \
             "" \
             "If you want to reuse this network specify -n $VIR_NET_OCT"
     ok
