@@ -7,10 +7,12 @@
 - DNS on the host managed by dnsmasq or NetworkManager/dnsmasq
 - OpenShift 4 Pull secret
 
+### Demo:
+
+[![asciicast](https://asciinema.org/a/bw6Wja2vBLrAkpKHTV0yGeuzo.svg)](https://asciinema.org/a/bw6Wja2vBLrAkpKHTV0yGeuzo)
 
 ### Usage:
 ./ocp4_setup_upi_kvm.sh [OPTIONS]
-
 
 
 | Option  |Description   |
