@@ -131,6 +131,7 @@ test -z "$PULL_SEC_F" && PULL_SEC_F="/root/pull-secret"; PULL_SEC=$(cat "$PULL_S
 
 OCP_MIRROR="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"
 RHCOS_MIRROR="https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos"
+LB_IMG_URL="https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1907.qcow2"
 
 if [ "$SHOW_HELP" == "yes" ]; then
 echo
@@ -378,9 +379,8 @@ IMAGE_URL="$RHCOS_MIRROR/${RHCOS_VER}/${urldir}/${IMAGE}"
 echo -n "====> Checking if Image URL is downloadable: "; download check "$IMAGE" "$IMAGE_URL";
 
 # CENTOS CLOUD IMAGE
-LB_IMG_URL="https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
 LB_IMG="${LB_IMG_URL##*/}"
-echo -n "====> Checking if Centos cloud image URL is downloadable: "; download check "$LB_IMG" "$IMAGE_URL";
+echo -n "====> Checking if Centos cloud image URL is downloadable: "; download check "$LB_IMG" "$LB_IMG_URL";
 
 
 echo
@@ -420,7 +420,7 @@ if [ -n "$VIR_NET_OCT" -a "$VIR_NET_RECREATE" != "yes" ]; then
             "   # virsh net-destroy ocp-${VIR_NET_OCT}" \
             "   # virsh net-undefine ocp-${VIR_NET_OCT}" \
             "" \
-            "If you want to reuse this network specify -n $VIR_NET_OCT"
+            "If you want to reuse this network specify -n ocp-$VIR_NET_OCT"
     ok
 elif [ -n "$VIR_NET" ]; then
     virsh net-uuid "${VIR_NET}" &> /dev/null || \
