@@ -131,7 +131,7 @@ test -z "$PULL_SEC_F" && PULL_SEC_F="/root/pull-secret"; PULL_SEC=$(cat "$PULL_S
 
 OCP_MIRROR="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"
 RHCOS_MIRROR="https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos"
-LB_IMG_URL="https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1907.qcow2"
+LB_IMG_URL="https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
 
 if [ "$SHOW_HELP" == "yes" ]; then
 echo
