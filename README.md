@@ -59,5 +59,5 @@
     ./ocp4_setup_upi_kvm.sh -O 4.2.stable -N 155
 
     # Destory the already installed cluster
-    ./ocp4_setup_upi_kvm.sh --cluster-name ocp43 --cluster-domain lab.test.com --destroy-installation
-    ./ocp4_setup_upi_kvm.sh -c ocp43 -d lab.test.com --destroy-installation
+    ./ocp4_setup_upi_kvm.sh --cluster-name ocp43 --cluster-domain lab.test.com --destroy
+    ./ocp4_setup_upi_kvm.sh -c ocp43 -d lab.test.com --destroy
