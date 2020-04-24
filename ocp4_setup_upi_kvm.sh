@@ -32,7 +32,7 @@ case $key in
     -m|--masters)
     N_MAST="$2"
     test "$N_MAST" -gt "0" &>/dev/null || err "Invalid masters: $N_MAST"
-    sdhift
+    shift
     shift
     ;;
     -w|--workers)
@@ -249,7 +249,7 @@ download() {
     then
         test "$FRESH_DOWN" = "yes" -a -f "${CACHE_DIR}/$2" && rm -f "${CACHE_DIR}/$2" || true
         test -f "${CACHE_DIR}/$2" && echo "(reusing cached file) " || \
-            { echo; wget -q --show-progress "$3" -O "${CACHE_DIR}/$2"; }
+            { echo; wget "$3" -O "${CACHE_DIR}/$2"; }
     fi
 }
 
@@ -321,7 +321,7 @@ if [ "$OCP_VERSION" == "latest" -o "$OCP_VERSION" == "stable" ]; then
 else
     test "$(echo $OCP_VERSION | cut -d '.' -f1)" = "4" || err "Invalid OpenShift version $OCP_VERSION"
     OCP_VER=$(echo "$OCP_VERSION" | cut -d '.' -f1-2)
-    OCP_MINOR=$(echo "$OCP_VERSION" | cut -d '.' -f3)
+    OCP_MINOR=$(echo "$OCP_VERSION" | cut -d '.' -f3-)
     test -z "$OCP_MINOR" && OCP_MINOR="stable"
     if [ "$OCP_MINOR" == "latest" -o "$OCP_MINOR" == "stable" ]
     then
@@ -342,10 +342,12 @@ INSTALLER=$(curl --fail -qs "${OCP_MIRROR}/${urldir}/" | grep  -m1 "install-linu
 INSTALLER_URL="${OCP_MIRROR}/${urldir}/${INSTALLER}"
 echo -n "====> Checking if Installer URL is downloadable: ";  download check "$INSTALLER" "$INSTALLER_URL";
 
+OCP_NORMALIZED_VER=$(echo "${INSTALLER}" | sed 's/.*-\(4\..*\)\.tar.*/\1/' )
+
 # RHCOS KERNEL, INITRAMFS AND IMAGE FILES
 
 if [ -z "$RHCOS_VERSION" ]; then
-    RHCOS_VER=$(echo "${INSTALLER##*-}" | cut -d '.' -f1-2 )
+    RHCOS_VER=$(echo "${OCP_NORMALIZED_VER}" | cut -d '.' -f1-2 )
     RHCOS_MINOR="latest"
 else
     RHCOS_VER=$(echo "$RHCOS_VERSION" | cut -d '.' -f1-2)
@@ -378,6 +380,8 @@ IMAGE=$(curl --fail -qs ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/ | grep -m1 "meta
 IMAGE_URL="$RHCOS_MIRROR/${RHCOS_VER}/${urldir}/${IMAGE}"
 echo -n "====> Checking if Image URL is downloadable: "; download check "$IMAGE" "$IMAGE_URL";
 
+RHCOS_NORMALIZED_VER=$(echo "${IMAGE}" | sed 's/.*-\(4\..*\)-x86.*/\1/')
+
 # CENTOS CLOUD IMAGE
 LB_IMG="${LB_IMG_URL##*/}"
 echo -n "====> Checking if Centos cloud image URL is downloadable: "; download check "$LB_IMG" "$LB_IMG_URL";
@@ -385,9 +389,9 @@ echo -n "====> Checking if Centos cloud image URL is downloadable: "; download c
 
 echo
 echo
-echo "      Red Hat OpenShit Version = $(echo "${INSTALLER##*-}" | cut -d '.' -f1-3 )"
+echo "      Red Hat OpenShit Version = $OCP_NORMALIZED_VER"
 echo
-echo "        Red Hat CoreOS Version = $(echo "${IMAGE}" | cut -d '-' -f2 )"
+echo "        Red Hat CoreOS Version = $RHCOS_NORMALIZED_VER"
 
 check_if_we_can_continue
 
@@ -408,6 +412,14 @@ for f in "/usr/lib64/libvirt/connection-driver/libvirt_driver_network.so" \
 do
     test -e "$f" &> /dev/null || err "file $f not found"
 done
+ok
+
+echo -n "====> Checking if the script/working directory already exists: "
+test -d "$SCRIPT_DIR" && \
+    err "Directory $SCRIPT_DIR already exists" \
+        "" \
+        "You can use --destroy to remove your existing installation" \
+        "You can also use --script-dir to specify a different directory for this installation"
 ok
 
 echo -n "====> Checking if libvirt is running: "
@@ -499,7 +511,6 @@ fi
 
 
 echo -n "====> Creating and using directory $SCRIPT_DIR: "
-test -d "$SCRIPT_DIR" && err "Directory $SCRIPT_DIR already exists"
 mkdir -p $SCRIPT_DIR && cd $SCRIPT_DIR || err "using $SCRIPT_DIR failed"
 ok
 
@@ -624,24 +635,24 @@ do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:22623 check" >> haproxy.cfg
 done
 echo "
-# 80 points to worker nodes
+# 80 points to master nodes
 frontend ${CLUSTER_NAME}-http *:80
   default_backend ingress-http
 backend ingress-http
   balance source" >> haproxy.cfg
-for i in $(seq 1 ${N_WORK})
+for i in $(seq 1 ${N_MAST})
 do
-    echo "  server worker-${i} worker-${i}.${CLUSTER_NAME}.${BASE_DOM}:80 check" >> haproxy.cfg
+    echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:80 check" >> haproxy.cfg
 done
 echo "
-# 443 points to worker nodes
+# 443 points to master nodes
 frontend ${CLUSTER_NAME}-https *:443
   default_backend infra-https
 backend infra-https
   balance source" >> haproxy.cfg
-for i in $(seq 1 ${N_WORK})
+for i in $(seq 1 ${N_MAST})
 do
-    echo "  server worker-${i} worker-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
+    echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
 done
 
 
@@ -803,17 +814,17 @@ done
 echo -n "====> Waiting for Bootstrap to obtain IP address: "
 while true; do
     sleep 5
-    IP=$(virsh domifaddr "${CLUSTER_NAME}-bootstrap" | grep ipv4 | head -n1 | awk '{print $4}' | cut -d'/' -f1 2> /dev/null)
-    test "$?" -eq "0" -a -n "$IP"  && { echo "$IP"; break; }
+    BSIP=$(virsh domifaddr "${CLUSTER_NAME}-bootstrap" | grep ipv4 | head -n1 | awk '{print $4}' | cut -d'/' -f1 2> /dev/null)
+    test "$?" -eq "0" -a -n "$BSIP"  && { echo "$BSIP"; break; }
 done
 MAC=$(virsh domifaddr "${CLUSTER_NAME}-bootstrap" | grep ipv4 | head -n1 | awk '{print $2}')
 
 echo -n "  ==> Adding DHCP reservation: "
-virsh net-update ${VIR_NET} add-last ip-dhcp-host --xml "<host mac='$MAC' ip='$IP'/>" --live --config > /dev/null || \
+virsh net-update ${VIR_NET} add-last ip-dhcp-host --xml "<host mac='$MAC' ip='$BSIP'/>" --live --config > /dev/null || \
     err "Adding DHCP reservation failed"; ok
 
 echo -n "  ==> Adding /etc/hosts entry: "
-echo "$IP bootstrap.${CLUSTER_NAME}.${BASE_DOM}" >> /etc/hosts || err "failed"; ok
+echo "$BSIP bootstrap.${CLUSTER_NAME}.${BASE_DOM}" >> /etc/hosts || err "failed"; ok
 
 
 for i in $(seq 1 ${N_MAST}); do
@@ -882,6 +893,7 @@ ok
 
 echo -n "====> Waiting for SSH access on Boostrap VM: "
 ssh-keygen -R bootstrap.${CLUSTER_NAME}.${BASE_DOM} &> /dev/null || true
+ssh-keygen -R $BSIP  &> /dev/null || true
 while true; do
     sleep 1
     ssh -i sshkey -o StrictHostKeyChecking=no core@bootstrap.${CLUSTER_NAME}.${BASE_DOM} true &> /dev/null || continue
@@ -991,6 +1003,7 @@ echo "#################################"
 echo 
 
 echo "====> Waiting for clusterversion: "
+ingress_patched=0
 imgreg_patched=0
 output_delay=0
 while true
@@ -1002,12 +1015,43 @@ do
         ./oc get configs.imageregistry.operator.openshift.io cluster &> /dev/null && \
        {
             sleep 30
-            output_delay=0
             echo -n '  --> Patching image registry to use EmptyDir: ';
-            ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}' && \
+            ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}' 2> /dev/null && \
                 imgreg_patched=1 || true
         } || true        
     fi
+
+    if [ "$ingress_patched" == "0" ]; then
+        ./oc get -n openshift-ingress-operator ingresscontroller default &> /dev/null && \
+        {
+            sleep 30
+            echo -n '  --> Patching ingress controller to run router pods on master nodes: ';
+            ./oc patch ingresscontroller default -n openshift-ingress-operator \
+                --type merge \
+                --patch '{
+                    "spec":{
+                        "replicas": '"${N_MAST}"',
+                        "nodePlacement":{
+                            "nodeSelector":{
+                                "matchLabels":{
+                                    "node-role.kubernetes.io/master":""
+                                }
+                            },
+                            "tolerations":[{
+                                "effect": "NoSchedule",
+                                "operator": "Exists"
+                            }]
+                        }
+                    }
+                }' 2> /dev/null && ingress_patched=1 || true
+        } || true
+    fi
+
+    for csr in $(./oc get csr 2> /dev/null | grep -w 'Pending' | awk '{print $1}'); do
+        echo -n '  --> Approving CSR: ';
+        ./oc adm certificate approve "$csr" 2> /dev/null || true
+        output_delay=0
+    done
 
     if [ "$output_delay" -gt 8 ]; then
         echo -n "  --> ${cv_prog_msg:0:70}"; test -n "${cv_prog_msg:71}" && echo " ..." || echo
