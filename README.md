@@ -96,6 +96,30 @@ cd [setup-dir]
 ## Miscellaneous
 
 ### [PREREQUISITE] Setting up dnsmasq
+* We need a DNS server and we will be using dnsmasq. You have two options <font color='red'>(pick either one)</font>:
+
+  1. **Use NetworkManager's embedded dnsmasq**
+
+      This is preferable if you are running this on your laptop with dynamic interfaces getting IP/DNS from DHCP. dnsmasq in NetworkManager is not enabled by defualt. If you don't have this enabled and want to use this mode, you can simply enable it by:
+
+     ~~~
+     echo -e "[main]\ndns=dnsmasq" > /etc/NetworkManager/conf.d/nm-dns.conf
+     systemctl restart NetworkManager
+     ~~~
+      To read more about this feature I recommend reading this [Fedora Magazine post by Clark](https://fedoramagazine.org/using-the-networkmanagers-dnsmasq-plugin/).
+
+  2. **Setup a separate dnsmasq server on the host**
+
+      This is preferable if the network on the host is not being managed by NetworkManager. To setup dnsmasq run the following commands (adjust according to your environment):
+
+     ~~~
+     yum -y install dnsmasq
+     for x in $(virsh net-list --name); do virsh net-info $x | awk '/Bridge:/{print "except-interface="$2}'; done > /etc/dnsmasq.d/except-interfaces.conf
+     sed -i '/^nameserver/i nameserver 127.0.0.1' /etc/resolv.conf
+     systemctl restart dnsmasq
+     systemctl enable dnsmasq
+     ~~~
+
 
 ### Exposing the cluster outside the host
 
