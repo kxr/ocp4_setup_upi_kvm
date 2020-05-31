@@ -7,6 +7,8 @@
 - DNS on the host managed by dnsmasq or NetworkManager/dnsmasq
 - OpenShift 4 Pull secret
 
+## Installing OpenShift 4 Cluster
+
 ### Demo:
 
 [![asciicast](https://asciinema.org/a/bw6Wja2vBLrAkpKHTV0yGeuzo.svg)](https://asciinema.org/a/bw6Wja2vBLrAkpKHTV0yGeuzo)
@@ -25,11 +27,19 @@
 | -d, --cluster-domain DOMAIN | OpenShift 4 cluster domain<br>Default: local |
 | -m, --masters N | Number of masters to deploy<br>Default: 3 |
 | -w, --worker N | Number of workers to deploy<br>Default: 2 |
+| --master-cpu N | Number of CPUs for the master VM(s)<br>Default: 4 |
+| --master-mem SIZE(MB) | RAM size (MB) of master VM(s)<br>Default: 16000 |
+| --worker-cpu N | Number of CPUs for the worker VM(s)<br>Default: 4 |
+| --worker-mem SIZE(MB) | RAM size (MB) of worker VM(s)<br>Default: 8000 |
+| --bootstrap-cpu N | Number of CPUs for the bootstrap VM<br>Default: 4 |
+| --bootstrap-mem SIZE(MB) | RAM size (MB) of bootstrap VM<br>Default: 16000 |
+| --lb-cpu N | Number of CPUs for the load balancer VM<br>Default: 1 |
+| --lb-mem SIZE(MB) | RAM size (MB) of load balancer VM<br>Default: 1024 |
 | -n, --libvirt-network NETWORK | The libvirt network to use. Select this option if you want to use an existing libvirt network<br>The libvirt network should already exist. If you want the script to create a separate network for this installation see: -N, --libvirt-oct<br>Default: default |
 | -N, --libvirt-oct OCTET | You can specify a 192.168.{OCTET}.0 subnet octet and this script will create a new libvirt network for the cluster<br>The network will be named ocp-{OCTET}. If the libvirt network ocp-{OCTET} already exists, the script will fail unless --libvirt-network-recreate is specified<br>Default: [not set] |
 | -v, --vm-dir | The location where you want to store the VM Disks<br>Default: /var/lib/libvirt/images |
 | -z, --dns-dir DIR | We expect the DNS on the host to be managed by dnsmasq. You can use NetworkMananger's built-in dnsmasq or use a separate dnsmasq running on the host. If you are running a separate dnsmasq on the host, set this to "/etc/dnsmasq.d"<br>Default: /etc/NetworkManager/dnsmasq.d |
-| -s, --script-dir DIR | The location where we the script keeps all the files related to the installation<br>Default: /root/ocp4\_setup\_{CLUSTER_NAME} |
+| -s, --setup-dir DIR | The location where we the script keeps all the files related to the installation<br>Default: /root/ocp4\_setup\_{CLUSTER_NAME} |
 | -x, --cache-dir DIR | To avoid un-necessary downloads we download the OpenShift/RHCOS files to a cache directory and reuse the files if they exist<br>This way you only download a file once and reuse them for future installs<br>You can force the script to download a fresh copy by using -X, --fresh-download<br>Default: /root/ocp4_downloads |
 | -X, --fresh-download | Set this if you want to force the script to download a fresh copy of the files instead of reusing the existing ones in cache dir<br>Default: [not set] |
 | -k, --keep-bootstrap | Set this if you want to keep the bootstrap VM. By default bootstrap VM is removed once the bootstraping is finished<br>Default: [not set] |
@@ -61,3 +71,36 @@
     # Destory the already installed cluster
     ./ocp4_setup_upi_kvm.sh --cluster-name ocp43 --cluster-domain lab.test.com --destroy
     ./ocp4_setup_upi_kvm.sh -c ocp43 -d lab.test.com --destroy
+
+
+## Adding Nodes
+
+Once the installation is successful, you will find a `add_node.sh` script in the `--setup-dir` (default: /root/ocp4\_setup\_{CLUSTER_NAME}). You can use this to add more nodes to the cluster, post installation.
+
+### Usage:
+cd [setup-dir]
+./add_node.sh --name [node-name] [OPTIONS]
+
+
+| Option  |Description   |
+| :------------ | :------------ |
+|______________________________||
+| --name NAME | The node name without the domain.<br> For example: If you specify storage-1, and your cluster name is "ocp4" and base domain is "local", the new node would be "storage-1.ocp4.local".<br> Default: [not set] [REQUIRED] |
+| -c, --cpu N | Number of CPUs to be attached to this node's VM. Default: 2|
+| -m, --memory SIZE(MB) | Amount of Memory to be attached to this node's VM. Size in MB.<br> Default: 4096 |
+| -a, --add-disk SIZE(GB) | You can add additional disks to this node. Size in GB.<br> This option can be specified multiple times. Disks are added in order for example if you specify "--add-disk 10 --add-disk 100", two disks will be added (on top of the OS disk vda) first of 10GB (/dev/vdb) and second disk of 100GB (/dev/vdc).<br> Default: [not set] |
+| -v, --vm-dir | The location where you want to store the VM Disks.<br> By default the location used by the cluster VMs will be used. |
+|  -N, --libvirt-oct OCTET| You can specify a 192.168.{OCTET}.0 subnet octet and this script will create a new libvirt network for this node.<br> The network will be named ocp-{OCTET}. If the libvirt network ocp-{OCTET} already exists, it will be used.<br> This can be useful if you want to add a node in different network than the one used by the cluster.<br> Default: [not set] |
+| -n, --libvirt-network NETWORK | The libvirt network to use. Select this option if you want to use an existing libvirt network.<br> By default the existing libvirt network used by the cluster will be used. |
+
+## Miscellaneous
+
+### [PREREQUISITE] Setting up dnsmasq
+
+### Exposing the cluster outside the host
+
+### Number of masters and workers
+
+### Setting up OCS
+
+
