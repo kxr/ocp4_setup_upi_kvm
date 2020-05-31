@@ -120,6 +120,8 @@ cd [setup-dir]
      systemctl enable dnsmasq
      ~~~
 
+* Make sure that the first entry in /etc/resolv.conf if pointing to 127.0.0.1. Also dobule check that restarting network/Network Manager on the host doesn't override the /etc/resolv.conf
+
 
 ### Exposing the cluster outside the host
 
