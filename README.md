@@ -4,7 +4,7 @@
 
 - Internet connected physical host running a modern linux distribution
 - Virtualization enabled and Libvirt/KVM setup
-- DNS on the host managed by dnsmasq or NetworkManager/dnsmasq
+- DNS on the host managed by dnsmasq or NetworkManager/dnsmasq [(more details)](https://github.com/kxr/ocp4_setup_upi_kvm/#prerequisite-setting-up-dnsmasq)
 - OpenShift 4 Pull secret
 
 ## Installing OpenShift 4 Cluster
