@@ -3,6 +3,9 @@
 
 set -e
 START_TS=$(date +%s)
+SINV="${0} ${@}"
+SDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 
 err() {
     echo; echo;
@@ -183,7 +186,6 @@ test -z "$VM_DIR" && VM_DIR="/var/lib/libvirt/images"
 test -z "$SETUP_DIR" && SETUP_DIR="/root/ocp4_setup_${CLUSTER_NAME}"
 test -z "$CACHE_DIR" && CACHE_DIR="/root/ocp4_downloads" && mkdir -p "$CACHE_DIR"
 test -z "$PULL_SEC_F" && PULL_SEC_F="/root/pull-secret"; PULL_SEC=$(cat "$PULL_SEC_F")
-SDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 OCP_MIRROR="https://mirror.openshift.com/pub/openshift-v4/clients/ocp"
 RHCOS_MIRROR="https://mirror.openshift.com/pub/openshift-v4/dependencies/rhcos"
@@ -1171,14 +1173,14 @@ echo
 
 cat <<EOF > env
 # OCP4 Automated Install using https://github.com/kxr/ocp4_setup_upi_kvm
-# Script location: $SDIR
-# Script invoked with: $0 $@
-# OpenShift version: $OCP_NORMALIZED_VER
-# Red Hat CoreOS version: $RHCOS_NORMALIZED_VER
+# Script location: ${SDIR}
+# Script invoked with: ${SINV}
+# OpenShift version: ${OCP_NORMALIZED_VER}
+# Red Hat CoreOS version: ${RHCOS_NORMALIZED_VER}
 #
 # Script start time: $(date -d @${START_TS})
 # Script end time:   $(date -d @${END_TS})
-# Script finished in: $TIME_TAKEN minutes
+# Script finished in: ${TIME_TAKEN} minutes
 #
 # VARS:
 
