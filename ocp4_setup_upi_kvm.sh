@@ -344,6 +344,10 @@ if [ "$CLEANUP" == "yes" ]; then
     echo "##################"
     echo 
 
+    if [ -n "$VIR_NET_OCT" -a -z "$VIR_NET" ]; then
+        VIR_NET="ocp-${VIR_NET_OCT}"
+    fi
+
     for vm in $(virsh list --all --name | grep "${CLUSTER_NAME}-lb\|${CLUSTER_NAME}-master-\|${CLUSTER_NAME}-worker-\|${CLUSTER_NAME}-bootstrap"); do
         check_if_we_can_continue "Deleting VM $vm"
         IP=$(virsh domifaddr "$vm" | grep ipv4 | head -n1 | awk '{print $4}' | cut -d'/' -f1 2> /dev/null)
