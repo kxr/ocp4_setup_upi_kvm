@@ -1026,6 +1026,16 @@ do
         } || true        
     fi
 
+    if [ "$mgdreg_patched" == "0" ]; then
+        ./oc get configs.imageregistry.operator.openshift.io cluster &> /dev/null && \
+       {
+            sleep 30
+            echo -n '  --> Patching image registry to use Managed management state instead of Removed ';
+            ./oc patch configs.imageregistry.operator.openshift.io/cluster --type merge --p '{"spec":{"managementState": "Managed"}}' 2> /dev/null && \
+                mgdreg_patched=1 || true
+        } || true        
+    fi
+
     if [ "$ingress_patched" == "0" ]; then
         ./oc get -n openshift-ingress-operator ingresscontroller default &> /dev/null && \
         {
