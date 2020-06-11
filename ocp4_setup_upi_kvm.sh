@@ -3,6 +3,9 @@
 
 set -e
 START_TS=$(date +%s)
+SINV="${0} ${@}"
+SDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 
 err() {
     echo; echo;
@@ -37,7 +40,7 @@ case $key in
     ;;
     -w|--workers)
     N_WORK="$2"
-    test "$N_MAST" -gt "0" &> /dev/null || err "Invalid workers: $N_MAST"
+    test "$N_WORK" -gt "0" &> /dev/null || err "Invalid workers: $N_WORK"
     shift
     shift
     ;;
@@ -77,13 +80,61 @@ case $key in
     shift
     shift
     ;;
-    -s|--script-dir)
-    SCRIPT_DIR="$2"
+    -s|--setup-dir)
+    SETUP_DIR="$2"
     shift
     shift
     ;;
     -x|--cache-dir)
     CACHE_DIR="$2"; mkdir -p "$CACHE_DIR"
+    shift
+    shift
+    ;;
+    --master-cpu)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --master-cpu"
+    MAS_CPU="$2"
+    shift
+    shift
+    ;;
+    --master-mem)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --master-mem"
+    MAS_MEM="$2"
+    shift
+    shift
+    ;;
+    --worker-cpu)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --worker-cpu"
+    WOR_CPU="$2"
+    shift
+    shift
+    ;;
+    --worker-mem)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --worker-mem"
+    WOR_MEM="$2"
+    shift
+    shift
+    ;;
+    --bootstrap-cpu)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --bootstrap-cpu"
+    BTS_CPU="$2"
+    shift
+    shift
+    ;;
+    --bootstrap-mem)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --bootstrap-mem"
+    BTS_MEM="$2"
+    shift
+    shift
+    ;;
+    --lb-cpu)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --lb-cpu"
+    LB_CPU="$2"
+    shift
+    shift
+    ;;
+    --lb-mem)
+    test "$2" -gt "0" &>/dev/null || err "Invalid value $2 for --lb-mem"
+    LB_MEM="$2"
     shift
     shift
     ;;
@@ -118,14 +169,21 @@ done
 test -z "$OCP_VERSION" && OCP_VERSION="stable"
 test -z "$N_MAST" && N_MAST="3"
 test -z "$N_WORK" && N_WORK="2"
+test -z "$MAS_CPU" && MAS_CPU="4"
+test -z "$MAS_MEM" && MAS_MEM="16000"
+test -z "$WOR_CPU" && WOR_CPU="2"
+test -z "$WOR_MEM" && WOR_MEM="8000"
+test -z "$BTS_CPU" && BTS_CPU="4"
+test -z "$BTS_MEM" && BTS_MEM="16000"
+test -z "$LB_CPU" && LB_CPU="1"
+test -z "$LB_MEM" && LB_MEM="1024"
 test -z "$VIR_NET" -a -z "$VIR_NET_OCT" && VIR_NET="default"
-test -n "$VIR_NET" -a -n "$VIR_NET_OCT" && err "Specify either -n or -N or -O" 
-test -n "$VIR_NET" -a -n "$VIR_NET_RECREATE" && err "Cannot recreate existing network by name (use -N or -O)" 
+test -n "$VIR_NET" -a -n "$VIR_NET_OCT" && err "Specify either -n or -N" 
 test -z "$CLUSTER_NAME" && CLUSTER_NAME="ocp4"
 test -z "$BASE_DOM" && BASE_DOM="local"
 test -z "$DNS_DIR" && DNS_DIR="/etc/NetworkManager/dnsmasq.d"
 test -z "$VM_DIR" && VM_DIR="/var/lib/libvirt/images"
-test -z "$SCRIPT_DIR" && SCRIPT_DIR="/root/ocp4_setup_${CLUSTER_NAME}"
+test -z "$SETUP_DIR" && SETUP_DIR="/root/ocp4_setup_${CLUSTER_NAME}"
 test -z "$CACHE_DIR" && CACHE_DIR="/root/ocp4_downloads" && mkdir -p "$CACHE_DIR"
 test -z "$PULL_SEC_F" && PULL_SEC_F="/root/pull-secret"; PULL_SEC=$(cat "$PULL_SEC_F")
 
@@ -161,12 +219,36 @@ cat << EOF | column -L -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 -w, --worker N|Number of workers to deploy
 |Default: 2
 
+--master-cpu N|Master VMs CPUs
+|Default: 4
+
+--master-mem SIZE(MB)|Master VMs Memory (in MB)
+|Default: 16000
+
+--worker-cpu N|Worker VMs CPUs
+|Default: 4
+
+--worker-mem SIZE(MB)|Worker VMs Memory (in MB)
+|Default: 8000
+
+--bootstrap-cpu N|Bootstrap VM CPUs
+|Default: 4
+
+--bootstrap-mem SIZE(MB)|Bootstrap VM Memory (in MB)
+|Default: 16000
+
+--lb-cpu N|Loadbalancer VM CPUs
+|Default: 1
+
+--bootstrap-mem SIZE(MB)|Loadbalancer VM Memory (in MB)
+|Default: 1024
+
 -n, --libvirt-network NETWORK|The libvirt network to use. Select this option if you want to use an existing libvirt network.
 |The libvirt network should already exist. If you want the script to create a separate network for this installation see: -N, --libvirt-oct
 |Default: default
 
 -N, --libvirt-oct OCTET|You can specify a 192.168.{OCTET}.0 subnet octet and this script will create a new libvirt network for the cluster
-|The network will be named ocp-{OCTET}. If the libvirt network ocp-{OCTET} already exists, the script will fail unless --libvirt-network-recreate is specified
+|The network will be named ocp-{OCTET}. If the libvirt network ocp-{OCTET} already exists, it will be used.
 |Default: <not set>
 
 -v, --vm-dir|The location where you want to store the VM Disks
@@ -175,7 +257,7 @@ cat << EOF | column -L -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 -z, --dns-dir DIR|We expect the DNS on the host to be managed by dnsmasq. You can use NetworkMananger's built-in dnsmasq or use a separate dnsmasq running on the host. If you are running a separate dnsmasq on the host, set this to "/etc/dnsmasq.d"
 |Default: /etc/NetworkManager/dnsmasq.d
 
--s, --script-dir DIR|The location where we the script keeps all the files related to the installation
+-s, --setup-dir DIR|The location where we the script keeps all the files related to the installation
 |Default: /root/ocp4_setup_{CLUSTER_NAME}
 
 -x, --cache-dir DIR|To avoid un-necessary downloads we download the OpenShift/RHCOS files to a cache directory and reuse the files if they exist
@@ -262,6 +344,10 @@ if [ "$CLEANUP" == "yes" ]; then
     echo "##################"
     echo 
 
+    if [ -n "$VIR_NET_OCT" -a -z "$VIR_NET" ]; then
+        VIR_NET="ocp-${VIR_NET_OCT}"
+    fi
+
     for vm in $(virsh list --all --name | grep "${CLUSTER_NAME}-lb\|${CLUSTER_NAME}-master-\|${CLUSTER_NAME}-worker-\|${CLUSTER_NAME}-bootstrap"); do
         check_if_we_can_continue "Deleting VM $vm"
         IP=$(virsh domifaddr "$vm" | grep ipv4 | head -n1 | awk '{print $4}' | cut -d'/' -f1 2> /dev/null)
@@ -286,10 +372,10 @@ if [ "$CLEANUP" == "yes" ]; then
         fi
     fi
 
-    if [ -d "$SCRIPT_DIR" ]; then
-        check_if_we_can_continue "Removing directory (rm -rf) $SCRIPT_DIR"
-        echo -n "XXXX> Deleting (rm -rf) directory $SCRIPT_DIR: "
-        rm -rf "$SCRIPT_DIR"
+    if [ -d "$SETUP_DIR" ]; then
+        check_if_we_can_continue "Removing directory (rm -rf) $SETUP_DIR"
+        echo -n "XXXX> Deleting (rm -rf) directory $SETUP_DIR: "
+        rm -rf "$SETUP_DIR"
         ok
     fi
 
@@ -420,8 +506,8 @@ done
 ok
 
 echo -n "====> Checking if the script/working directory already exists: "
-test -d "$SCRIPT_DIR" && \
-    err "Directory $SCRIPT_DIR already exists" \
+test -d "$SETUP_DIR" && \
+    err "Directory $SETUP_DIR already exists" \
         "" \
         "You can use --destroy to remove your existing installation" \
         "You can also use --script-dir to specify a different directory for this installation"
@@ -431,20 +517,19 @@ echo -n "====> Checking if libvirt is running: "
     systemctl -q is-active libvirtd || err "libvirtd is not running"; ok
 
 echo -n "====> Checking libvirt network: "
-if [ -n "$VIR_NET_OCT" -a "$VIR_NET_RECREATE" != "yes" ]; then
+if [ -n "$VIR_NET_OCT" ]; then
     virsh net-uuid "ocp-${VIR_NET_OCT}" &> /dev/null && \
-        err "libvirt network ocp-${VIR_NET_OCT} already exists" "You can delete this network by running:" \
-            "   # virsh net-destroy ocp-${VIR_NET_OCT}" \
-            "   # virsh net-undefine ocp-${VIR_NET_OCT}" \
-            "" \
-            "If you want to reuse this network specify -n ocp-$VIR_NET_OCT"
-    ok
+        {   VIR_NET="ocp-${VIR_NET_OCT}"
+            ok "re-using ocp-${VIR_NET_OCT}"
+            unset VIR_NET_OCT
+        } || \
+        {
+            ok "will create ocp-${VIR_NET_OCT} (192.168.${VIR_NET_OCT}.0/24)"
+        }
 elif [ -n "$VIR_NET" ]; then
     virsh net-uuid "${VIR_NET}" &> /dev/null || \
         err "${VIR_NET} doesn't exist"
     ok "using $VIR_NET"
-elif [ "$VIR_NET_RECREATE" == "yes" -a -n "$VIR_NET_OCT"  ]; then
-    ok "ok, will be deleting and recreating ocp-${VIR_NET_OCT}"
 else
     err "Sorry, unhandled situation. Exiting"
 fi
@@ -515,8 +600,8 @@ else
 fi
 
 
-echo -n "====> Creating and using directory $SCRIPT_DIR: "
-mkdir -p $SCRIPT_DIR && cd $SCRIPT_DIR || err "using $SCRIPT_DIR failed"
+echo -n "====> Creating and using directory $SETUP_DIR: "
+mkdir -p $SETUP_DIR && cd $SETUP_DIR || err "using $SETUP_DIR failed"
 ok
 
 echo -n "====> Generating SSH key to be injected in all VMs: "
@@ -679,14 +764,14 @@ echo "====> Setting up Loadbalancer VM: "
 virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
     --uninstall cloud-init --ssh-inject root:file:$SSH_KEY --selinux-relabel --install haproxy --install bind-utils \
     --copy-in install_dir/bootstrap.ign:/opt/ --copy-in install_dir/master.ign:/opt/ --copy-in install_dir/worker.ign:/opt/ \
-    --copy-in "${CACHE_DIR}/${IMAGE}":/opt/ --copy-in tmpws.service:/etc/systemd/system \
+    --copy-in "${CACHE_DIR}/${IMAGE}":/opt/ --copy-in tmpws.service:/etc/systemd/system/ \
     --copy-in haproxy.cfg:/etc/haproxy/ \
     --run-command "systemctl daemon-reload" --run-command "systemctl enable tmpws.service" || \
     err "Setting up Loadbalancer VM image ${VM_DIR}/${CLUSTER_NAME}-lb.qcow2 failed"
 
 echo -n "====> Creating Loadbalancer VM: "
 virt-install --import --name ${CLUSTER_NAME}-lb --disk "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
-    --memory 1024 --cpu host --vcpus 1 --os-type linux --os-variant rhel7-unknown --network network=${VIR_NET},model=virtio \
+    --memory ${LB_MEM} --cpu host --vcpus ${LB_CPU} --os-type linux --os-variant rhel7-unknown --network network=${VIR_NET},model=virtio \
     --noreboot --noautoconsole > /dev/null || \
     err "Creating Loadbalancer VM from ${VM_DIR}/${CLUSTER_NAME}-lb.qcow2 failed"; ok
 
@@ -764,7 +849,7 @@ echo
 
 echo -n "====> Creating Boostrap VM: "
 virt-install --name ${CLUSTER_NAME}-bootstrap \
-  --disk "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2,size=50" --ram 16000 --cpu host --vcpus 4 \
+  --disk "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2,size=50" --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
   --os-type linux --os-variant rhel7-unknown \
   --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
   --location rhcos-install/ \
@@ -774,7 +859,7 @@ for i in $(seq 1 ${N_MAST})
 do
 echo -n "====> Creating Master-${i} VM: "
 virt-install --name ${CLUSTER_NAME}-master-${i} \
---disk "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2,size=50" --ram 16000 --cpu host --vcpus 4 \
+--disk "${VM_DIR}/${CLUSTER_NAME}-master-${i}.qcow2,size=50" --ram ${MAS_MEM} --cpu host --vcpus ${MAS_CPU} \
 --os-type linux --os-variant rhel7-unknown \
 --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
 --location rhcos-install/ \
@@ -785,7 +870,7 @@ for i in $(seq 1 ${N_WORK})
 do
 echo -n "====> Creating Worker-${i} VM: "
   virt-install --name ${CLUSTER_NAME}-worker-${i} \
-  --disk "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2,size=50" --ram 8192 --cpu host --vcpus 4 \
+  --disk "${VM_DIR}/${CLUSTER_NAME}-worker-${i}.qcow2,size=50" --ram ${WOR_MEM} --cpu host --vcpus ${WOR_CPU} \
   --os-type linux --os-variant rhel7-unknown \
   --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
   --location rhcos-install/ \
@@ -914,6 +999,7 @@ echo "#### OPENSHIFT BOOTSTRAPING ###"
 echo "###############################"
 echo 
 
+cp install_dir/auth/kubeconfig install_dir/auth/kubeconfig.orig
 export KUBECONFIG="install_dir/auth/kubeconfig"
 
 
@@ -1023,6 +1109,8 @@ do
             echo -n '  --> Patching image registry to use EmptyDir: ';
             ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}' 2> /dev/null && \
                 imgreg_patched=1 || true
+            sleep 30
+            test "$imgreg_patched" -eq "1" && ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"managementState":"Managed"}}' &> /dev/null || true
         } || true        
     fi
 
@@ -1089,3 +1177,41 @@ echo "          time taken = $TIME_TAKEN minutes"
 echo 
 
 ./openshift-install --dir=install_dir wait-for install-complete
+
+
+
+
+# Create an env file to record the vars
+# Can be used for future operations
+
+
+cat <<EOF > env
+# OCP4 Automated Install using https://github.com/kxr/ocp4_setup_upi_kvm
+# Script location: ${SDIR}
+# Script invoked with: ${SINV}
+# OpenShift version: ${OCP_NORMALIZED_VER}
+# Red Hat CoreOS version: ${RHCOS_NORMALIZED_VER}
+#
+# Script start time: $(date -d @${START_TS})
+# Script end time:   $(date -d @${END_TS})
+# Script finished in: ${TIME_TAKEN} minutes
+#
+# VARS:
+
+export LBIP="$LBIP"
+export WS_PORT="$WS_PORT"
+export IMAGE="$IMAGE"
+export CLUSTER_NAME="$CLUSTER_NAME"
+export VIR_NET="$VIR_NET"
+export DNS_DIR="$DNS_DIR"
+export VM_DIR="$VM_DIR"
+export SETUP_DIR="$SETUP_DIR"
+export CLUSTER_NAME="$CLUSTER_NAME"
+export BASE_DOM="$BASE_DOM"
+export DNS_CMD="$DNS_CMD"
+export DNS_SVC="$DNS_SVC"
+
+export KUBECONFIG="${SETUP_DIR}/install_dir/auth/kubeconfig"
+EOF
+cp ${SDIR}/.add_node.sh ${SETUP_DIR}/add_node.sh
+
