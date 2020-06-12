@@ -1110,7 +1110,7 @@ do
             ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}' 2> /dev/null && \
                 imgreg_patched=1 || true
             sleep 30
-            test "$imgreg_patched" -eq "1" && ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"managementState":"Managed"}}' &> /dev/null || true
+            test "$imgreg_patched" -eq "1" && ./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"managementState": "Managed"}}' &> /dev/null || true
         } || true        
     fi
 
