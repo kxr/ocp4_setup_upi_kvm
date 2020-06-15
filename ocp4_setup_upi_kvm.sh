@@ -734,6 +734,10 @@ for i in $(seq 1 ${N_MAST})
 do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:80 check" >> haproxy.cfg
 done
+for i in $(seq 1 ${N_WORK})
+do
+    echo "  server worker-${i} worker-${i}.${CLUSTER_NAME}.${BASE_DOM}:80 check" >> haproxy.cfg
+done
 echo "
 # 443 points to master nodes
 frontend ${CLUSTER_NAME}-https *:443
@@ -743,6 +747,11 @@ backend infra-https
 for i in $(seq 1 ${N_MAST})
 do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
+done
+
+for i in $(seq 1 ${N_WORK})
+do
+    echo "  server worker-${i} worker-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
 done
 
 
