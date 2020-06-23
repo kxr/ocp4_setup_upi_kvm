@@ -40,7 +40,7 @@ case $key in
     ;;
     -w|--workers)
     N_WORK="$2"
-    test "$N_WORK" -gt "0" &> /dev/null || err "Invalid workers: $N_WORK"
+    test "$N_WORK" -ge "0" &> /dev/null || err "Invalid workers: $N_WORK"
     shift
     shift
     ;;
@@ -353,7 +353,7 @@ if [ "$CLEANUP" == "yes" ]; then
         IP=$(virsh domifaddr "$vm" | grep ipv4 | head -n1 | awk '{print $4}' | cut -d'/' -f1 2> /dev/null)
         MAC=$(virsh domifaddr "$vm" | grep ipv4 | head -n1 | awk '{print $2}')
         echo -n "XXXX> Deleting DHCP reservation for VM $vm: "
-        virsh net-update ${VIR_NET} delete ip-dhcp-host --xml "<host mac='$MAC' ip='$IP'/>" --live --config > /dev/null || \
+        virsh net-update ${VIR_NET} delete ip-dhcp-host --xml "<host mac='$MAC' ip='$IP'/>" --live --config > /dev/null || true ||\
         err "Deleting DHCP reservation failed"; ok
         echo -n "XXXX> Deleting VM $vm: "
         virsh destroy "$vm" > /dev/null || err "virsh destroy $vm failed";
