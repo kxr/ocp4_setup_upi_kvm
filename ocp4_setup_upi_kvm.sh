@@ -1204,4 +1204,5 @@ export DNS_SVC="$DNS_SVC"
 export KUBECONFIG="${SETUP_DIR}/install_dir/auth/kubeconfig"
 EOF
 cp ${SDIR}/.add_node.sh ${SETUP_DIR}/add_node.sh
+cp ${SDIR}/.expose_cluster.sh ${SETUP_DIR}/expose_cluster.sh
 
