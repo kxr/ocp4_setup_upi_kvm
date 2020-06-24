@@ -513,8 +513,8 @@ test -d "$SETUP_DIR" && \
         "You can also use --script-dir to specify a different directory for this installation"
 ok
 
-echo -n "====> Checking if libvirt is running: "
-    systemctl -q is-active libvirtd || err "libvirtd is not running"; ok
+echo -n "====> Checking if libvirt is running or enabled: "
+    systemctl -q is-active libvirtd || systemctl -q is-enabled libvirtd || err "libvirtd is not running nor enabled"
 
 echo -n "====> Checking libvirt network: "
 if [ -n "$VIR_NET_OCT" ]; then
