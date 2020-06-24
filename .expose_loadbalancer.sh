@@ -102,4 +102,11 @@ echo "###############################################"
 echo "### PORT FORWARD RULES CREATED SUCCESSFULLY ###"
 echo "###############################################"
 echo
+
+echo "Port forward rules have been created."
+echo "The following hosts need to be defined in DNS so they can be resolved by your clients:"
+echo "  console-openshift-console.apps.${CLUSTER_NAME}.local"
+echo "  api.${CLUSTER_NAME}.local"
+echo "  oauth-openshift.apps.${CLUSTER_NAME}.local"
+
 exit 0
