@@ -78,9 +78,8 @@
 Once the installation is successful, you will find a `add_node.sh` script in the `--setup-dir` (default: /root/ocp4\_setup\_{CLUSTER_NAME}). You can use this to add more nodes to the cluster, post installation.
 
 ### Usage:
-cd [setup-dir]
-./add_node.sh --name [node-name] [OPTIONS]
-
+    cd [setup-dir]
+    ./add_node.sh --name [node-name] [OPTIONS]
 
 | Option  |Description   |
 | :------------ | :------------ |
@@ -92,6 +91,16 @@ cd [setup-dir]
 | -v, --vm-dir | The location where you want to store the VM Disks.<br> By default the location used by the cluster VMs will be used. |
 |  -N, --libvirt-oct OCTET| You can specify a 192.168.{OCTET}.0 subnet octet and this script will create a new libvirt network for this node.<br> The network will be named ocp-{OCTET}. If the libvirt network ocp-{OCTET} already exists, it will be used.<br> This can be useful if you want to add a node in different network than the one used by the cluster.<br> Default: [not set] |
 | -n, --libvirt-network NETWORK | The libvirt network to use. Select this option if you want to use an existing libvirt network.<br> By default the existing libvirt network used by the cluster will be used. |
+
+### Exposing the cluster outside the host/hypervisor
+Once the installation is successful, you will find a `expose_cluster.sh` script in the `--setup-dir` (default: /root/ocp4\_setup\_{CLUSTER_NAME}). You can use this to expose this cluster so it can be accessed from outside.
+
+### Usage:
+
+    cd [setup-dir]
+    ./expose_cluster.sh --method [ firewalld | haproxy ]
+
+If you are running a single cluster on your bare metal machine, you can expose that cluster via firewalld method (port forwarding). If you want to host and access multiple clusters, you can use the haproxy method.
 
 ## Miscellaneous
 
@@ -121,9 +130,6 @@ cd [setup-dir]
      ~~~
 
 * Make sure that the first entry in /etc/resolv.conf if pointing to 127.0.0.1. Also dobule check that restarting network/Network Manager on the host doesn't override the /etc/resolv.conf
-
-
-### Exposing the cluster outside the host
 
 ### Number of masters and workers
 
