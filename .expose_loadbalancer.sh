@@ -89,9 +89,13 @@ echo "### CREATE PORT FORWARD RULES ###"
 echo "#################################"
 echo
 
+test ! -z "$VIR_NET" || err "Missing VIR_NET in env file [$envfile] - make sure you have successfully installed the OpenShift cluster prior to running this script"
+
 firewall-cmd --add-forward-port=port=443:proto=tcp:toaddr=${LBIP}:toport=443 || err "Failed to forward port 443 to [${LBIP}:443]"
 firewall-cmd --add-forward-port=port=6443:proto=tcp:toaddr=${LBIP}:toport=6443 || err "Failed to forward port 6443 to [${LBIP}:6443]"
 firewall-cmd --add-forward-port=port=80:proto=tcp:toaddr=${LBIP}:toport=80 || err "Failed to forward port 80 to [${LBIP}:80]"
+firewall-cmd --direct --passthrough ipv4 -I FORWARD -i ${VIR_NET} -j ACCEPT || err "Failed to set up direct passthrough from [${VIR_NET}]"
+firewall-cmd --direct --passthrough ipv4 -I FORWARD -o ${VIR_NET} -j ACCEPT || err "Failed to set up direct passthrough to [${VIR_NET}]"
 
 echo 
 echo "###############################################"
