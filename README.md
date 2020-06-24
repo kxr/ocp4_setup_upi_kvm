@@ -92,7 +92,7 @@ Once the installation is successful, you will find a `add_node.sh` script in the
 |  -N, --libvirt-oct OCTET| You can specify a 192.168.{OCTET}.0 subnet octet and this script will create a new libvirt network for this node.<br> The network will be named ocp-{OCTET}. If the libvirt network ocp-{OCTET} already exists, it will be used.<br> This can be useful if you want to add a node in different network than the one used by the cluster.<br> Default: [not set] |
 | -n, --libvirt-network NETWORK | The libvirt network to use. Select this option if you want to use an existing libvirt network.<br> By default the existing libvirt network used by the cluster will be used. |
 
-### Exposing the cluster outside the host/hypervisor
+## Exposing the cluster outside the host/hypervisor
 Once the installation is successful, you will find a `expose_cluster.sh` script in the `--setup-dir` (default: /root/ocp4\_setup\_{CLUSTER_NAME}). You can use this to expose this cluster so it can be accessed from outside.
 
 ### Usage:
@@ -101,6 +101,36 @@ Once the installation is successful, you will find a `expose_cluster.sh` script 
     ./expose_cluster.sh --method [ firewalld | haproxy ]
 
 If you are running a single cluster on your bare metal machine, you can expose that cluster via firewalld method (port forwarding). If you want to host and access multiple clusters, you can use the haproxy method.
+
+### DNS
+
+Once you have exposed your cluster(s), you must ensure you have the proper DNS entries available to your remote clients. One simple way to do this is to edit the `/etc/hosts` file on your client machines such that your exposed cluster endpoints are declared. The output of the `.expose_cluster.sh` script will give you an example line you can use for your `/etc/hosts` file.
+
+You need to expose a minimum of three endpoints: the OpenShift console, the API endpoint, and the OAuth endpoint. For example, if you installed with the default names (i.e. the cluster name is "ocp4" and the base domain is "local") you will need to expose these three endpoints:
+
+* console-openshift-console.apps.ocp4.local
+* api.ocp4.local
+* oauth-openshift.apps.ocp4.local
+
+If you will later configure OpenShift to expose its image registry (a typical dev use case that will allow you to push images directly into your cluster), you will need to expose this endpoint as well:
+
+* default-route-openshift-image-registry.apps.ocp4.local
+
+Finally, any custom Route resources you create in your OpenShift cluster will also need to be exposed via DNS.
+
+### Additional configurations that may be needed
+
+If SELinux is in Enforcing mode, you need to tell it to treat port 6443 as a webport via `semanage port -a -t http_port_t -p tcp 6443`.
+
+If you exposed your cluster using the haproxy method, and your firewall is enabled, you need to open up the necessary ports via:
+
+```
+firewall-cmd --add-service=http
+firewall-cmd --add-service=https
+firewall-cmd --add-port=6443/tcp
+```
+
+The output of the `.expose_cluster.sh` script will remind you about these additional configurations.
 
 ## Miscellaneous
 

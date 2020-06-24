@@ -241,6 +241,10 @@ EOF
     echo "      firewall-cmd --add-port=6443/tcp"
     echo "      firewall-cmd --runtime-to-permanent"
     echo
+    echo "# If SELinux is in Enforcing mode, you need to tell it to treat port 6443 as a webport, e.g:"
+    echo
+    echo "      semanage port -a -t http_port_t -p tcp 6443"
+    echo
     echo
 
 
