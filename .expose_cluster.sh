@@ -147,11 +147,11 @@ if [ "$EXPOSE_METHOD" == "firewalld" ]; then
     echo -n "====> Adding forward-port rule port=80:proto=tcp:toaddr=${LBIP}:toport=80: "
     firewall-cmd --add-forward-port=port=80:proto=tcp:toaddr=${LBIP}:toport=80 || echo "Failed"
 
-    echo -n "====> Adding passthrough forwarding -I FORWARD -i ${VIR_NET}: "
-    firewall-cmd --direct --passthrough ipv4 -I FORWARD -i ${VIR_NET} -j ACCEPT || echo "Failed"
+    echo -n "====> Adding passthrough forwarding -I FORWARD -i ${VIR_INT}: "
+    firewall-cmd --direct --passthrough ipv4 -I FORWARD -i ${VIR_INT} -j ACCEPT || echo "Failed"
 
-    echo -n "====> Adding passthrough forwarding -I FORWARD -o ${VIR_NET}: "
-    firewall-cmd --direct --passthrough ipv4 -I FORWARD -o ${VIR_NET} -j ACCEPT || echo "Failed"
+    echo -n "====> Adding passthrough forwarding -I FORWARD -o ${VIR_INT}: "
+    firewall-cmd --direct --passthrough ipv4 -I FORWARD -o ${VIR_INT} -j ACCEPT || echo "Failed"
 
 
 # --method haproxy
