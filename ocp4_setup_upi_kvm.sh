@@ -510,7 +510,7 @@ test -d "$SETUP_DIR" && \
     err "Directory $SETUP_DIR already exists" \
         "" \
         "You can use --destroy to remove your existing installation" \
-        "You can also use --script-dir to specify a different directory for this installation"
+        "You can also use --setup-dir to specify a different directory for this installation"
 ok
 
 echo -n "====> Checking if libvirt is running or enabled: "
