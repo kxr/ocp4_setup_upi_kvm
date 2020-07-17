@@ -158,6 +158,10 @@ case $key in
     SHOW_HELP="yes"
     shift
     ;;
+    -ac|--autostart-cluster)
+    AUTOSTART_CLUSTER="yes"
+    shift
+    ;;
     *)
     echo "ERROR: Invalid argument $key"
     exit 1
@@ -272,6 +276,9 @@ cat << EOF | column -L -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 |Default: <not set>
 
 -y, --yes|Set this for the script to be non-interactive and continue with out asking for confirmation
+|Default: <not set>
+
+-ac, --autostart-cluster|Set this if you want the cluster VMs to automatically start at host boot time
 |Default: <not set>
 
 --destroy|Set this if you want the script to destroy everything it has created.
@@ -1204,4 +1211,9 @@ export KUBECONFIG="${SETUP_DIR}/install_dir/auth/kubeconfig"
 EOF
 cp ${SDIR}/.add_node.sh ${SETUP_DIR}/add_node.sh
 cp ${SDIR}/.expose_cluster.sh ${SETUP_DIR}/expose_cluster.sh
+cp ${SDIR}/.config_vm_autostart.sh ${SETUP_DIR}/config_vm_autostart.sh
 
+# If the user wants the cluster to autostart at boot time, configure the VMs now
+if [ "$AUTOSTART_CLUSTER" == "yes" ]; then
+  ${SETUP_DIR}/config_vm_autostart.sh --autostart true $(test ! -z "$YES" && echo "--yes")
+fi
