@@ -190,6 +190,33 @@ Note: You can replace the `"."` with the cluster name or any matching string to 
 
 ___
 
+## Errors While Waiting for clusterversion
+
+When the bootstrap process is complete, the script waits for clusterversion to become ready before the cluster installation is considered completed. During this phase the script just shows the status/message of the the clustervresion operator. You can see different kind of errors which are normal. This is due to the nature of operator reconciliation process. For example:
+
+~~~
+====> Waiting for clusterversion:
+--> Unable to apply 4.5.0-rc.6: an unknown error has occurred: MultipleErr ...
+--> Unable to apply 4.5.0-rc.6: an unknown error has occurred: MultipleErr ...
+--> Working towards 4.5.0-rc.6: 62% complete
+--> Working towards 4.5.0-rc.6: 62% complete
+--> Unable to apply 4.5.0-rc.6: an unknown error has occurred: MultipleErr ...
+--> Working towards 4.5.0-rc.6: 99% complete
+~~~
+
+~~~
+====> Waiting for clusterversion: 
+  --> Working towards 4.3.12: 46% complete
+  --> Unable to apply 4.3.12: an unknown error has occurred
+  --> Working towards 4.3.12: 61% complete
+  --> Unable to apply 4.3.12: an unknown error has occurred
+  --> Unable to apply 4.3.12: an unknown error has occurred
+  --> Unable to apply 4.3.12: an unknown error has occurred
+~~~
+
+Just let it run and hopefully the clusterversion operator will reconcile and become ready eventually.
+___
+
 ## Number of masters and workers
 
 ___
