@@ -163,6 +163,27 @@ ___
      ~~~
 
 * Make sure that the first entry in /etc/resolv.conf if pointing to 127.0.0.1. Also dobule check that restarting network/Network Manager on the host doesn't override the /etc/resolv.conf
+___
+
+## Auto Starting VMs
+
+By default, if you reboot the host/hypervisor, the VMs will not start up automatically. You can set the VMs to autostart by running:
+
+~~~
+for vm in $(virsh list --all --name --no-autostart | grep "."); do
+  virsh autostart ${vm}
+done
+~~~
+
+Similarly to disable the auto starting of VMs, you can run:
+
+~~~
+for vm in $(virsh list --all --name --autostart | grep "."); do
+  virsh autostart --disable ${vm}
+done
+~~~
+
+Note: You can replace the `"."` with the cluster name or any matching string to filter out VMs that you want to set/un-set to be auto-started. 
 
 ___
 
