@@ -43,6 +43,7 @@
 | -x, --cache-dir DIR | To avoid un-necessary downloads we download the OpenShift/RHCOS files to a cache directory and reuse the files if they exist<br>This way you only download a file once and reuse them for future installs<br>You can force the script to download a fresh copy by using -X, --fresh-download<br>Default: /root/ocp4_downloads |
 | -X, --fresh-download | Set this if you want to force the script to download a fresh copy of the files instead of reusing the existing ones in cache dir<br>Default: [not set] |
 | -k, --keep-bootstrap | Set this if you want to keep the bootstrap VM. By default bootstrap VM is removed once the bootstraping is finished<br>Default: [not set] |
+| --autostart-vms | Set this if you want to the cluster VMs to be set to auto-start on reboot<br> Default: [not set] |
 | -y, --yes | Set this for the script to be non-interactive and continue with out asking for confirmation<br>Default: [not set] |
 | --destroy | Set this if you want the script to destroy everything it has created<br>Use this option with the same options you used to install the cluster<br>Be carefull this deletes the VMs, DNS entries and the libvirt network (if created by the script)<br>Default: [not set] |
 
@@ -167,7 +168,9 @@ ___
 
 ## Auto Starting VMs
 
-By default, if you reboot the host/hypervisor, the VMs will not start up automatically. You can set the VMs to autostart by running:
+By default, if you reboot the host/hypervisor, the VMs will not start up automatically. You can set `--autostart-vms` when running the install script that will mark the VMs to auto-start. To see which VMs are set or not set to auto-start you can run `virsh list --all --name --autostart` or `virsh list --all --name --no-autostart` respectively.
+
+If you want to change/set the autostart behaviour, you can set the VMs to auto-start by running:
 
 ~~~
 for vm in $(virsh list --all --name --no-autostart | grep "."); do
@@ -175,7 +178,7 @@ for vm in $(virsh list --all --name --no-autostart | grep "."); do
 done
 ~~~
 
-Similarly to disable the auto starting of VMs, you can run:
+Similarly, to disable the auto starting of VMs, you can run:
 
 ~~~
 for vm in $(virsh list --all --name --autostart | grep "."); do

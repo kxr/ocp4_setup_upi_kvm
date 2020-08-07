@@ -146,6 +146,10 @@ case $key in
     KEEP_BS="yes"
     shift
     ;;
+    --autostart-vms)
+    AUTOSTART_VMS="yes"
+    shift
+    ;;
     --destroy)
     CLEANUP="yes"
     shift
@@ -269,6 +273,9 @@ cat << EOF | column -L -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 |Default: <not set>
 
 -k, --keep-bootstrap|Set this if you want to keep the bootstrap VM. By default bootstrap VM is removed once the bootstraping is finished
+|Default: <not set>
+
+--autostart-vms|Set this if you want to the cluster VMs to be set to auto-start on reboot.
 |Default: <not set>
 
 -y, --yes|Set this for the script to be non-interactive and continue with out asking for confirmation
@@ -979,6 +986,15 @@ ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl -q is-active haproxy" 
     err "haproxy not working as expected" && echo -n "."
 ok
 
+
+if [ "$AUTOSTART_VMS" == "yes" ]; then
+    echo -n "====> Setting VMs to autostart: "
+    for vm in $(virsh list --all --name --no-autostart | grep "^${CLUSTER_NAME}-"); do
+        virsh autostart "${vm}" &> /dev/null
+        echo -n "."
+    done
+    ok
+fi
 
 
 echo -n "====> Waiting for SSH access on Boostrap VM: "
