@@ -191,7 +191,7 @@ cat <<EOF > ${HAPROXY_CFG}
         option tcplog
         tcp-request inspect-delay 10s
         tcp-request content accept if { req_ssl_hello_type 1 }
-        use_backend ${CLUSTER_NAME}-api   if { req.ssl_sni -m end apps.${CLUSTER_NAME}.${BASE_DOM} }
+        use_backend ${CLUSTER_NAME}-api   if { req.ssl_sni -m end api.${CLUSTER_NAME}.${BASE_DOM} }
     frontend fe-https
         bind *:443
         mode tcp
