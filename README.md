@@ -173,7 +173,7 @@ By default, if you reboot the host/hypervisor, the VMs will not start up automat
 If you want to change/set the autostart behaviour, you can set the VMs to auto-start by running:
 
 ~~~
-for vm in $(virsh list --all --name --no-autostart | grep "."); do
+for vm in $(virsh list --all --name --no-autostart | grep "<CLUSTER-NAME>"); do
   virsh autostart ${vm}
 done
 ~~~
@@ -181,12 +181,12 @@ done
 Similarly, to disable the auto starting of VMs, you can run:
 
 ~~~
-for vm in $(virsh list --all --name --autostart | grep "."); do
+for vm in $(virsh list --all --name --autostart | grep "<CLUSTER-NAME>"); do
   virsh autostart --disable ${vm}
 done
 ~~~
 
-Note: You can replace the `"."` with the cluster name or any matching string to filter out VMs that you want to set/un-set to be auto-started. 
+Note: Replace `<CLUSTER-NAME>` with the cluster name or any matching string to filter out VMs that you want to set/un-set to be auto-started. 
 
 ___
 
