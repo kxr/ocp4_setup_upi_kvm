@@ -4,7 +4,7 @@
 
 - Internet connected physical host running a modern linux distribution
 - Virtualization enabled and Libvirt/KVM setup
-- DNS on the host managed by dnsmasq or NetworkManager/dnsmasq [(more details)](https://github.com/kxr/ocp4_setup_upi_kvm/#prerequisite-setting-up-dnsmasq-on-the-hypervisor)
+- DNS on the host managed by dnsmasq or NetworkManager/dnsmasq [(more details)](https://github.com/kxr/ocp4_setup_upi_kvm/wiki/%5BPREREQUISITE%5D-Setting-up-dnsmasq-on-the-Hypervisor)
 - OpenShift 4 Pull secret
 
 ## Installing OpenShift 4 Cluster
@@ -136,34 +136,6 @@ firewall-cmd --add-port=6443/tcp
 
 The output of the `expose_cluster.sh --method haproxy` script will remind you about these additional configurations.
 
-___
-
-## [PREREQUISITE] Setting up dnsmasq on the Hypervisor
-* We need a DNS server and we will be using dnsmasq. You have two options <font color='red'>(pick either one)</font>:
-
-  1. **Use NetworkManager's embedded dnsmasq**
-
-      This is preferable if you are running this on your laptop with dynamic interfaces getting IP/DNS from DHCP. dnsmasq in NetworkManager is not enabled by defualt. If you don't have this enabled and want to use this mode, you can simply enable it by:
-
-     ~~~
-     echo -e "[main]\ndns=dnsmasq" > /etc/NetworkManager/conf.d/nm-dns.conf
-     systemctl restart NetworkManager
-     ~~~
-      To read more about this feature I recommend reading this [Fedora Magazine post by Clark](https://fedoramagazine.org/using-the-networkmanagers-dnsmasq-plugin/).
-
-  2. **Setup a separate dnsmasq server on the host**
-
-      This is preferable if the network on the host is not being managed by NetworkManager. To setup dnsmasq run the following commands (adjust according to your environment):
-
-     ~~~
-     yum -y install dnsmasq
-     for x in $(virsh net-list --name); do virsh net-info $x | awk '/Bridge:/{print "except-interface="$2}'; done > /etc/dnsmasq.d/except-interfaces.conf
-     sed -i '/^nameserver/i nameserver 127.0.0.1' /etc/resolv.conf
-     systemctl restart dnsmasq
-     systemctl enable dnsmasq
-     ~~~
-
-* Make sure that the first entry in /etc/resolv.conf if pointing to 127.0.0.1. Also dobule check that restarting network/Network Manager on the host doesn't override the /etc/resolv.conf
 ___
 
 ## Auto Starting VMs
