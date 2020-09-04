@@ -221,6 +221,7 @@ ___
 
 ___
 
-## Setting up OCS
+## [Setting up OCS](https://github.com/kxr/ocp4_setup_upi_kvm/wiki/Installing-OCS-4-(OpenShift-Container-Storage))
+
 
 
