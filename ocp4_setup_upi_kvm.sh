@@ -429,13 +429,13 @@ else
     fi
 fi
 echo -n "====> Looking up OCP4 client for release $urldir: "
-CLIENT=$(curl --fail -qs "${OCP_MIRROR}/${urldir}/" | grep  -m1 "client-linux" | sed 's/.*href="\(openshift-.*\)">open.*/\1/')
+CLIENT=$(curl -N --fail -qs "${OCP_MIRROR}/${urldir}/" | grep  -m1 "client-linux" | sed 's/.*href="\(openshift-.*\)">open.*/\1/')
     test -n "$CLIENT" || err "No client found in ${OCP_MIRROR}/${urldir}/"; ok "$CLIENT"
 CLIENT_URL="${OCP_MIRROR}/${urldir}/${CLIENT}"
 echo -n "====> Checking if Client URL is downloadable: "; download check "$CLIENT" "$CLIENT_URL";
 
 echo -n "====> Looking up OCP4 installer for release $urldir: "
-INSTALLER=$(curl --fail -qs "${OCP_MIRROR}/${urldir}/" | grep  -m1 "install-linux" | sed 's/.*href="\(openshift-.*\)">open.*/\1/')
+INSTALLER=$(curl -N --fail -qs "${OCP_MIRROR}/${urldir}/" | grep  -m1 "install-linux" | sed 's/.*href="\(openshift-.*\)">open.*/\1/')
     test -n "$INSTALLER" || err "No installer found in ${OCP_MIRROR}/${urldir}/"; ok "$INSTALLER"
 INSTALLER_URL="${OCP_MIRROR}/${urldir}/${INSTALLER}"
 echo -n "====> Checking if Installer URL is downloadable: ";  download check "$INSTALLER" "$INSTALLER_URL";
@@ -461,20 +461,33 @@ else
 fi
 
 echo -n "====> Looking up RHCOS kernel for release $RHCOS_VER/$urldir: "
-KERNEL=$(curl --fail -qs "${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/" | grep -m1 "installer-kernel" | sed 's/.*href="\(rhcos-.*\)">rhcos.*/\1/')
+KERNEL=$(curl -N --fail -qs "${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/" | grep -m1 "installer-kernel\|live-kernel" | sed 's/.*href="\(rhcos-.*\)">rhcos.*/\1/')
     test -n "$KERNEL" || err "No kernel found in ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/"; ok "$KERNEL"
 KERNEL_URL="${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/${KERNEL}"
 echo -n "====> Checking if Kernel URL is downloadable: "; download check "$KERNEL" "$KERNEL_URL";
 
 echo -n "====> Looking up RHCOS initramfs for release $RHCOS_VER/$urldir: "
-INITRAMFS=$(curl --fail -qs ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/ | grep -m1 "installer-initramfs" | sed 's/.*href="\(rhcos-.*\)">rhcos.*/\1/')
+INITRAMFS=$(curl -N --fail -qs ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/ | grep -m1 "installer-initramfs\|live-initramfs" | sed 's/.*href="\(rhcos-.*\)">rhcos.*/\1/')
     test -n "$INITRAMFS" || err "No initramfs found in ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/"; ok "$INITRAMFS"
 INITRAMFS_URL="$RHCOS_MIRROR/${RHCOS_VER}/${urldir}/${INITRAMFS}"
 echo -n "====> Checking if Initramfs URL is downloadable: "; download check "$INITRAMFS" "$INITRAMFS_URL";
 
+# Handling case of rhcos "live" (rhcos >= 4.6)
+if [[ "$KERNEL" =~ "live" && "$INITRAMFS" =~ "live" ]]; then
+    RHCOS_LIVE="yes"
+elif [[ "$KERNEL" =~ "installer" && "$INITRAMFS" =~ "installer" ]]; then
+    RHCOS_LIVE=""
+else
+    err "Sorry, unhandled situation. Exiting"
+fi
+
 echo -n "====> Looking up RHCOS image for release $RHCOS_VER/$urldir: "
-IMAGE=$(curl --fail -qs ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/ | grep -m1 "metal" | sed 's/.*href="\(rhcos-.*.raw.gz\)".*/\1/')
-    test -n "$IMAGE" || err "No image found in ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/"; ok "$IMAGE"
+if [ -n "$RHCOS_LIVE" ]; then
+    IMAGE=$(curl --fail -qs ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/ | grep -m1 "live-rootfs" | sed 's/.*href="\(rhcos-.*.img\)".*/\1/')
+else
+    IMAGE=$(curl -N --fail -qs ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/ | grep -m1 "metal" | sed 's/.*href="\(rhcos-.*.raw.gz\)".*/\1/')
+fi
+test -n "$IMAGE" || err "No image found in ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/"; ok "$IMAGE"
 IMAGE_URL="$RHCOS_MIRROR/${RHCOS_VER}/${urldir}/${IMAGE}"
 echo -n "====> Checking if Image URL is downloadable: "; download check "$IMAGE" "$IMAGE_URL";
 
@@ -853,6 +866,11 @@ echo "#### CREATE BOOTSTRAPING RHCOS/OCP NODES ###"
 echo "############################################"
 echo 
 
+if [ -n "$RHCOS_LIVE" ]; then
+    RHCOS_I_ARG="coreos.live.rootfs_url"
+else
+    RHCOS_I_ARG="coreos.inst.image_url"
+fi
 
 echo -n "====> Creating Boostrap VM: "
 virt-install --name ${CLUSTER_NAME}-bootstrap \
@@ -860,7 +878,7 @@ virt-install --name ${CLUSTER_NAME}-bootstrap \
   --os-type linux --os-variant rhel7-unknown \
   --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
   --location rhcos-install/ \
-  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/bootstrap.ign" > /dev/null || err "Creating boostrap vm failed"; ok
+  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda ${RHCOS_I_ARG}=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/bootstrap.ign" > /dev/null || err "Creating boostrap vm failed"; ok
 
 for i in $(seq 1 ${N_MAST})
 do
@@ -870,7 +888,7 @@ virt-install --name ${CLUSTER_NAME}-master-${i} \
 --os-type linux --os-variant rhel7-unknown \
 --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
 --location rhcos-install/ \
---extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/master.ign" > /dev/null || err "Creating master-${i} vm failed "; ok
+--extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda ${RHCOS_I_ARG}=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/master.ign" > /dev/null || err "Creating master-${i} vm failed "; ok
 done
 
 for i in $(seq 1 ${N_WORK})
@@ -881,7 +899,7 @@ echo -n "====> Creating Worker-${i} VM: "
   --os-type linux --os-variant rhel7-unknown \
   --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
   --location rhcos-install/ \
-  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/worker.ign" > /dev/null || err "Creating worker-${i} vm failed "; ok
+  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda ${RHCOS_I_ARG}=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/worker.ign" > /dev/null || err "Creating worker-${i} vm failed "; ok
 done
 
 echo "====> Waiting for RHCOS Installation to finish: "
@@ -1113,10 +1131,13 @@ echo "====> Waiting for clusterversion: "
 ingress_patched=0
 imgreg_patched=0
 output_delay=0
+nodes_total=$(( $N_MAST + $N_WORK ))
+nodes_ready=0
 while true
 do
     cv_prog_msg=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Progressing")].message}' 2> /dev/null) || continue
     cv_avail=$(./oc get clusterversion -o jsonpath='{.items[*].status.conditions[?(.type=="Available")].status}' 2> /dev/null) || continue
+    nodes_ready=$(./oc get nodes | grep 'Ready' | wc -l)
 
     if [ "$imgreg_patched" == "0" ]; then
         ./oc get configs.imageregistry.operator.openshift.io cluster &> /dev/null && \
@@ -1163,11 +1184,15 @@ do
     done
 
     if [ "$output_delay" -gt 8 ]; then
-        echo -n "  --> ${cv_prog_msg:0:70}"; test -n "${cv_prog_msg:71}" && echo " ..." || echo
+        if [ "$cv_avail" == "True" ]; then
+            echo "  --> Waiting for all nodes to ready. $nodes_ready/$nodes_total are ready."
+        else
+            echo -n "  --> ${cv_prog_msg:0:70}"; test -n "${cv_prog_msg:71}" && echo " ..." || echo
+        fi
         output_delay=0
     fi
 
-    test "$cv_avail" = "True" && break
+    test "$cv_avail" = "True" && test "$nodes_ready" -ge "$nodes_total" && break
     output_delay=$(( output_delay + 1 ))
     sleep 15
 done
