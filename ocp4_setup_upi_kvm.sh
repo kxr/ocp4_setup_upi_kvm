@@ -500,7 +500,7 @@ echo -n "====> Checking if Centos cloud image URL is downloadable: "; download c
 
 echo
 echo
-echo "      Red Hat OpenShit Version = $OCP_NORMALIZED_VER"
+echo "      Red Hat OpenShift Version = $OCP_NORMALIZED_VER"
 echo
 echo "        Red Hat CoreOS Version = $RHCOS_NORMALIZED_VER"
 
