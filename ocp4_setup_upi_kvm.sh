@@ -360,14 +360,6 @@ then
 	fi
 fi
 
-# TODO: Check if pull-secret file exists
-# echo "====> Checking pullsecret file exists: "
-# if [ ! -f "$PULL_SEC_F" ]; then
-#     err "Pull Secret ${PULL_SEC_F} was not found"
-# else
-#     PULL_SEC=$(cat "$PULL_SEC_F")
-# fi
-
 if [ "$CLEANUP" == "yes" ]; then
 
     echo 
