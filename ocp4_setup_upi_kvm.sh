@@ -831,7 +831,7 @@ virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
 
 echo -n "====> Creating Loadbalancer VM: "
 virt-install --import --name ${CLUSTER_NAME}-lb --disk "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
-    --memory ${LB_MEM} --cpu host --vcpus ${LB_CPU} --os-type linux --os-variant rhel7.0 --network network=${VIR_NET},model=virtio \
+    --memory ${LB_MEM} --cpu host --vcpus ${LB_CPU} --os-type linux --os-variant rhel7-unknown --network network=${VIR_NET},model=virtio \
     --noreboot --noautoconsole > /dev/null || \
     err "Creating Loadbalancer VM from ${VM_DIR}/${CLUSTER_NAME}-lb.qcow2 failed"; ok
 
@@ -915,7 +915,7 @@ fi
 echo -n "====> Creating Boostrap VM: "
 virt-install --name ${CLUSTER_NAME}-bootstrap \
   --disk "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2,size=50" --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
-  --os-type linux --os-variant rhel7.0 \
+  --os-type linux --os-variant rhel7-unknown \
   --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
   --location rhcos-install/ \
   --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda ${RHCOS_I_ARG}=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/bootstrap.ign" > /dev/null || err "Creating boostrap vm failed"; ok
