@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 # https://github.com/kxr/ocp4_setup_upi_kvm
 
 set -e
@@ -654,6 +654,7 @@ ok
 if [ -z "$SSH_KEY" ]; then
     echo -n "====> Generating SSH key to be injected in all VMs: "
     ssh-keygen -f sshkey -q -N "" || err "ssh-keygen failed"
+    SSH_KEY="sshkey"
     SSH_KEY_PUB="sshkey.pub"; ok
 fi
 
