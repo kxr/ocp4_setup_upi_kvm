@@ -44,6 +44,11 @@ case $key in
     shift
     shift
     ;;
+    -i|--ssh-private-key)
+    SSH_KEY="$2"
+    shift
+    shift
+    ;;
     -p|--pull-secret)
     PULL_SEC_F="$2"
     shift
@@ -211,6 +216,9 @@ cat << EOF | column -L -t -s '|' -N OPTION,DESCRIPTION -W DESCRIPTION
 -p, --pull-secret FILE|Location of the pull secret file
 |Default: /root/pull-secret
 
+-i, --ssh-private-key FILE|Location of the SSH private key to be used to access all nodes over SSH
+|By default this value is empty and a new SSH key will be created
+
 -c, --cluster-name NAME|OpenShift 4 cluster name
 |Default: ocp4
 
@@ -342,6 +350,23 @@ download() {
     fi
 }
 
+if [ ! -z "$SSH_KEY" ]
+then
+    echo "====> Checking ssh key exists: "
+    if [ ! -f "$SSH_KEY" ] || [ ! -f "$SSH_KEY.pub" ]; then
+        err "SSH key ${SSH_KEY} or '${SSH_KEY}.pub' was not found"
+    else
+        SSH_KEY_PUB=$SSH_KEY.pub
+	fi
+fi
+
+# TODO: Check if pull-secret file exists
+# echo "====> Checking pullsecret file exists: "
+# if [ ! -f "$PULL_SEC_F" ]; then
+#     err "Pull Secret ${PULL_SEC_F} was not found"
+# else
+#     PULL_SEC=$(cat "$PULL_SEC_F")
+# fi
 
 if [ "$CLEANUP" == "yes" ]; then
 
@@ -626,9 +651,11 @@ echo -n "====> Creating and using directory $SETUP_DIR: "
 mkdir -p $SETUP_DIR && cd $SETUP_DIR || err "using $SETUP_DIR failed"
 ok
 
-echo -n "====> Generating SSH key to be injected in all VMs: "
-ssh-keygen -f sshkey -q -N "" || err "ssh-keygen failed"
-SSH_KEY="sshkey.pub"; ok
+if [ -z "$SSH_KEY" ]; then
+    echo -n "====> Generating SSH key to be injected in all VMs: "
+    ssh-keygen -f sshkey -q -N "" || err "ssh-keygen failed"
+    SSH_KEY_PUB="sshkey.pub"; ok
+fi
 
 echo -n "====> Downloading OCP Client: "; download get "$CLIENT" "$CLIENT_URL";
 echo -n "====> Downloading OCP Installer: "; download get "$INSTALLER" "$INSTALLER_URL";
@@ -661,7 +688,7 @@ baseDomain: ${BASE_DOM}
 compute:
 - hyperthreading: Disabled
   name: worker
-  replicas: 0
+  replicas: ${N_WORK}
 controlPlane:
   hyperthreading: Disabled
   name: master
@@ -678,9 +705,11 @@ networking:
 platform:
   none: {}
 pullSecret: '${PULL_SEC}'
-sshKey: '$(cat $SSH_KEY)'
+sshKey: '$(cat $SSH_KEY_PUB)'
 EOF
 
+echo "====> Backup install-config"
+cp install_dir/install-config.yaml .
 
 echo "====> Creating ignition configs: "
 ./openshift-install create ignition-configs --dir=./install_dir || \
@@ -756,6 +785,10 @@ for i in $(seq 1 ${N_MAST})
 do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:80 check" >> haproxy.cfg
 done
+for i in $(seq 1 ${N_WORK})
+do
+    echo "  server worker-${i} worker-${i}.${CLUSTER_NAME}.${BASE_DOM}:80 check" >> haproxy.cfg
+done
 echo "
 # 443 points to master nodes
 frontend ${CLUSTER_NAME}-https *:443
@@ -765,6 +798,11 @@ backend infra-https
 for i in $(seq 1 ${N_MAST})
 do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
+done
+
+for i in $(seq 1 ${N_WORK})
+do
+    echo "  server worker-${i} worker-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
 done
 
 
@@ -784,7 +822,7 @@ cp "${CACHE_DIR}/CentOS-7-x86_64-GenericCloud.qcow2" "${VM_DIR}/${CLUSTER_NAME}-
 
 echo "====> Setting up Loadbalancer VM: "
 virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
-    --uninstall cloud-init --ssh-inject root:file:$SSH_KEY --selinux-relabel --install haproxy --install bind-utils \
+    --uninstall cloud-init --ssh-inject root:file:$SSH_KEY_PUB --selinux-relabel --install haproxy --install bind-utils \
     --copy-in install_dir/bootstrap.ign:/opt/ --copy-in install_dir/master.ign:/opt/ --copy-in install_dir/worker.ign:/opt/ \
     --copy-in "${CACHE_DIR}/${IMAGE}":/opt/ --copy-in tmpws.service:/etc/systemd/system/ \
     --copy-in haproxy.cfg:/etc/haproxy/ \
@@ -793,7 +831,7 @@ virt-customize -a "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
 
 echo -n "====> Creating Loadbalancer VM: "
 virt-install --import --name ${CLUSTER_NAME}-lb --disk "${VM_DIR}/${CLUSTER_NAME}-lb.qcow2" \
-    --memory ${LB_MEM} --cpu host --vcpus ${LB_CPU} --os-type linux --os-variant rhel7-unknown --network network=${VIR_NET},model=virtio \
+    --memory ${LB_MEM} --cpu host --vcpus ${LB_CPU} --os-type linux --os-variant rhel7.0 --network network=${VIR_NET},model=virtio \
     --noreboot --noautoconsole > /dev/null || \
     err "Creating Loadbalancer VM from ${VM_DIR}/${CLUSTER_NAME}-lb.qcow2 failed"; ok
 
@@ -822,10 +860,10 @@ ssh-keygen -R lb.${CLUSTER_NAME}.${BASE_DOM} &> /dev/null || true
 ssh-keygen -R $LBIP  &> /dev/null || true
 while true; do
     sleep 1
-    ssh -i sshkey -o StrictHostKeyChecking=no lb.${CLUSTER_NAME}.${BASE_DOM} true &> /dev/null || continue
+    ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no lb.${CLUSTER_NAME}.${BASE_DOM} true &> /dev/null || continue
     break
 done
-ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" true || err "SSH to lb.${CLUSTER_NAME}.${BASE_DOM} failed"; ok
+ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" true || err "SSH to lb.${CLUSTER_NAME}.${BASE_DOM} failed"; ok
 
 
 
@@ -841,11 +879,11 @@ systemctl restart libvirtd || err "systemctl restart libvirtd"; ok
 sleep 5
 
 echo -n "====> Testing DNS forward record from LB: "
-fwd_dig=$(ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "dig +short 'xxxtestxxx.${BASE_DOM}' 2> /dev/null")
+fwd_dig=$(ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" "dig +short 'xxxtestxxx.${BASE_DOM}' 2> /dev/null")
 test "$?" -eq "0" -a "$fwd_dig" = "1.2.3.4" || err "Testing DNS forward record failed ($fwd_dig)"; ok
 
 echo -n "====> Testing DNS reverse record from LB: "
-rev_dig=$(ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "dig +short -x '1.2.3.4' 2> /dev/null")
+rev_dig=$(ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" "dig +short -x '1.2.3.4' 2> /dev/null")
 test "$?" -eq "0" -a "$rev_dig" = "xxxtestxxx.${BASE_DOM}." || err "Testing DNS reverse record failed ($rev_dig)"; ok
 
 echo -n "====> Adding test SRV record in dnsmasq: "
@@ -853,7 +891,7 @@ echo "srv-host=xxxtestxxx.${BASE_DOM},yyyayyy.${BASE_DOM},2380,0,10" > ${DNS_DIR
 systemctl $DNS_CMD $DNS_SVC || err "systemctl $DNS_CMD $DNS_SVC failed"; ok
 
 echo -n "====> Testing SRV record from LB: "
-srv_dig=$(ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "dig srv +short 'xxxtestxxx.${BASE_DOM}' 2> /dev/null" | grep -q -s "yyyayyy.${BASE_DOM}") || \
+srv_dig=$(ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" "dig srv +short 'xxxtestxxx.${BASE_DOM}' 2> /dev/null" | grep -q -s "yyyayyy.${BASE_DOM}") || \
     err "ERROR: Testing SRV record failed"; ok
 
 echo -n "====> Cleaning up: "
@@ -877,7 +915,7 @@ fi
 echo -n "====> Creating Boostrap VM: "
 virt-install --name ${CLUSTER_NAME}-bootstrap \
   --disk "${VM_DIR}/${CLUSTER_NAME}-bootstrap.qcow2,size=50" --ram ${BTS_MEM} --cpu host --vcpus ${BTS_CPU} \
-  --os-type linux --os-variant rhel7-unknown \
+  --os-type linux --os-variant rhel7.0 \
   --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
   --location rhcos-install/ \
   --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda ${RHCOS_I_ARG}=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/bootstrap.ign" > /dev/null || err "Creating boostrap vm failed"; ok
@@ -994,15 +1032,15 @@ systemctl $DNS_CMD $DNS_SVC || err "systemctl $DNS_CMD $DNS_SVC"; ok
 
 
 echo -n "====> Configuring haproxy in LB VM: "
-ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "semanage port -a -t http_port_t -p tcp 6443" || \
+ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" "semanage port -a -t http_port_t -p tcp 6443" || \
     err "semanage port -a -t http_port_t -p tcp 6443 failed" && echo -n "."
-ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "semanage port -a -t http_port_t -p tcp 22623" || \
+ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" "semanage port -a -t http_port_t -p tcp 22623" || \
     err "semanage port -a -t http_port_t -p tcp 22623 failed" && echo -n "."
-ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl start haproxy" || \
+ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl start haproxy" || \
     err "systemctl start haproxy failed" && echo -n "."
-ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl -q enable haproxy" || \
+ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl -q enable haproxy" || \
     err "systemctl enable haproxy failed" && echo -n "."
-ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl -q is-active haproxy" || \
+ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl -q is-active haproxy" || \
     err "haproxy not working as expected" && echo -n "."
 ok
 
@@ -1022,10 +1060,10 @@ ssh-keygen -R bootstrap.${CLUSTER_NAME}.${BASE_DOM} &> /dev/null || true
 ssh-keygen -R $BSIP  &> /dev/null || true
 while true; do
     sleep 1
-    ssh -i sshkey -o StrictHostKeyChecking=no core@bootstrap.${CLUSTER_NAME}.${BASE_DOM} true &> /dev/null || continue
+    ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no core@bootstrap.${CLUSTER_NAME}.${BASE_DOM} true &> /dev/null || continue
     break
 done
-ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" true || err "SSH to lb.${CLUSTER_NAME}.${BASE_DOM} failed"; ok
+ssh -i ${SSH_KEY} "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" true || err "SSH to lb.${CLUSTER_NAME}.${BASE_DOM} failed"; ok
 
 
 
@@ -1063,7 +1101,7 @@ while true; do
             fi
         done
     fi
-    images=($(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo podman images 2> /dev/null | grep -v '^REPOSITORY' | awk '{print \$1 \"-\" \$3}'" )) || true
+    images=($(ssh -i ${SSH_KEY} "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo podman images 2> /dev/null | grep -v '^REPOSITORY' | awk '{print \$1 \"-\" \$3}'" )) || true
     for i in ${images[@]}; do
         if [[ ! " ${a_images[@]} " =~ " ${i} " ]]; then
             echo "  --> Image Downloaded: ${i}"
@@ -1071,7 +1109,7 @@ while true; do
             a_images+=( "${i}" )
         fi
     done
-    dones=($(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "ls /opt/openshift/*.done 2> /dev/null" )) || true
+    dones=($(ssh -i ${SSH_KEY} "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "ls /opt/openshift/*.done 2> /dev/null" )) || true
     for d in ${dones[@]}; do
         if [[ ! " ${a_dones[@]} " =~ " ${d} " ]]; then
             echo "  --> Phase Completed: $(echo $d | sed 's/.*\/\(.*\)\.done/\1/')"
@@ -1079,7 +1117,7 @@ while true; do
             a_dones+=( "${d}" )
         fi
     done
-    conts=($(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo crictl ps -a 2> /dev/null | grep -v '^CONTAINER' | rev | awk '{print \$4 \"_\" \$2 \"_\" \$3}' | rev" )) || true
+    conts=($(ssh -i ${SSH_KEY} "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo crictl ps -a 2> /dev/null | grep -v '^CONTAINER' | rev | awk '{print \$4 \"_\" \$2 \"_\" \$3}' | rev" )) || true
     for c in ${conts[@]}; do
         if [[ ! " ${a_conts[@]} " =~ " ${c} " ]]; then
             echo "  --> Container: $(echo $c | tr '_' ' ')"
@@ -1088,7 +1126,7 @@ while true; do
         fi
     done
 
-    btk_stat=$(ssh -i sshkey "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo systemctl is-active bootkube.service 2> /dev/null" ) || true
+    btk_stat=$(ssh -i ${SSH_KEY} "core@bootstrap.${CLUSTER_NAME}.${BASE_DOM}" "sudo systemctl is-active bootkube.service 2> /dev/null" ) || true
     test "$btk_stat" = "active" -a "$btk_started" = "0" && btk_started=1 || true
 
     test "$output_flag" = "0" && no_output_counter=$(( $no_output_counter + 1 )) || no_output_counter=0
@@ -1118,9 +1156,9 @@ else
 fi
 
 echo -n "====> Removing Bootstrap from haproxy: "
-ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" \
+ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" \
     "sed -i '/bootstrap\.${CLUSTER_NAME}\.${BASE_DOM}/d' /etc/haproxy/haproxy.cfg" || err "failed"
-ssh -i sshkey "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl restart haproxy" || err "failed"; ok
+ssh -i ${SSH_KEY} "lb.${CLUSTER_NAME}.${BASE_DOM}" "systemctl restart haproxy" || err "failed"; ok
 
 
 echo 
@@ -1239,6 +1277,7 @@ export VIR_NET="$VIR_NET"
 export DNS_DIR="$DNS_DIR"
 export VM_DIR="$VM_DIR"
 export SETUP_DIR="$SETUP_DIR"
+export CLUSTER_NAME="$CLUSTER_NAME"
 export BASE_DOM="$BASE_DOM"
 export DNS_CMD="$DNS_CMD"
 export DNS_SVC="$DNS_SVC"
