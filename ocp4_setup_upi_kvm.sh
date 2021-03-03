@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 # https://github.com/kxr/ocp4_setup_upi_kvm
 
 set -e
