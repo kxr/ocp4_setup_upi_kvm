@@ -688,7 +688,7 @@ baseDomain: ${BASE_DOM}
 compute:
 - hyperthreading: Disabled
   name: worker
-  replicas: ${N_WORK}
+  replicas: 0
 controlPlane:
   hyperthreading: Disabled
   name: master
