@@ -23,6 +23,7 @@
 | -O, --ocp-version VERSION | You can set this to "latest", "stable" or a specific version like "4.1", "4.1.2", "4.1.latest", "4.1.stable" etc.<br>Default: stable |
 | -R, --rhcos-version VERSION | You can set a specific RHCOS version to use. For example "4.1.0", "4.2.latest" etc.<br>By default the RHCOS version is matched from the OpenShift version. For example, if you selected 4.1.2  RHCOS 4.1/latest will be used |
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /root/pull-secret |
+| -i, --ssh-private-key FILE | Location of the SSH private key to be used to access all nodes over SSH |
 | -c, --cluster-name NAME | OpenShift 4 cluster name<br>Default: ocp4 |
 | -d, --cluster-domain DOMAIN | OpenShift 4 cluster domain<br>Default: local |
 | -m, --masters N | Number of masters to deploy<br>Default: 3 |
