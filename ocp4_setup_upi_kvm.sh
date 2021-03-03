@@ -793,12 +793,6 @@ do
     echo "  server master-${i} master-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
 done
 
-for i in $(seq 1 ${N_WORK})
-do
-    echo "  server worker-${i} worker-${i}.${CLUSTER_NAME}.${BASE_DOM}:443 check" >> haproxy.cfg
-done
-
-
 
 echo 
 echo "#################################"
