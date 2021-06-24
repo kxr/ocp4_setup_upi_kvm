@@ -1242,6 +1242,7 @@ export SETUP_DIR="$SETUP_DIR"
 export BASE_DOM="$BASE_DOM"
 export DNS_CMD="$DNS_CMD"
 export DNS_SVC="$DNS_SVC"
+export RHCOS_LIVE="$RHCOS_LIVE"
 
 export KUBECONFIG="${SETUP_DIR}/install_dir/auth/kubeconfig"
 EOF

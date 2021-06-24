@@ -150,6 +150,13 @@ fi
 
 cd ${SETUP_DIR}
 
+
+if [ -n "$RHCOS_LIVE" ]; then
+    RHCOS_I_ARG="coreos.live.rootfs_url"
+else
+    RHCOS_I_ARG="coreos.inst.image_url"
+fi
+
 echo -n "====> Creating ${NODE} VM: "
   virt-install --name ${CLUSTER_NAME}-${NODE} \
   --disk "${VM_DIR}/${CLUSTER_NAME}-${NODE}.qcow2,size=50" ${ADD_DISK} \
@@ -157,7 +164,8 @@ echo -n "====> Creating ${NODE} VM: "
   --os-type linux --os-variant rhel7-unknown \
   --network network=${VIR_NET},model=virtio --noreboot --noautoconsole \
   --location rhcos-install/ \
-  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/worker.ign" > /dev/null || err "Creating ${NODE} vm failed "; ok
+  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda ${RHCOS_I_ARG}=http://${LBIP}:${WS_PORT}/${IMAGE} coreos.inst.ignition_url=http://${LBIP}:${WS_PORT}/worker.ign" > /dev/null || err "Creating ${NODE} vm failed "; ok
+
 
 echo "====> Waiting for RHCOS Installation to finish: "
 while rvms=$(virsh list --name | grep "${CLUSTER_NAME}-${NODE}" 2> /dev/null); do
