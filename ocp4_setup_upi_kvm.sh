@@ -5,6 +5,7 @@ set -e
 export START_TS=$(date +%s)
 export SINV="${0} ${@}"
 export SDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+export COLS="$(stty size | awk '{print $2}')"
 
 # Utility function err,ok,download etc.
 source ${SDIR}/.install_scripts/utils.sh
