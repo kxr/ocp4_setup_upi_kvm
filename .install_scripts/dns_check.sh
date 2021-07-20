@@ -6,7 +6,6 @@ echo "#### DNS CHECK ###"
 echo "##################"
 echo
 
-
 reload_dns(){
     systemctl $DNS_CMD $DNS_SVC || err "systemctl $DNS_CMD $DNS_SVC failed"; echo -n "."
     sleep 5
@@ -32,29 +31,9 @@ fail() {
 
 echo -n "====> Checking if first entry in /etc/resolv.conf is pointing locally: "
 first_ns="$(grep -m1 "^nameserver " /etc/resolv.conf | awk '{print $2}')"
-if [ "${first_ns}" == "127.0.0.1" ]; then
-    ok
-elif [ "${first_ns}" == "127.0.0.53" ]; then
-    echo "systemd-resolved detected"
-    echo -n "====> Checking if first entry in /var/run/systemd/resolve/resolv.conf is pointing locally: "
-    resolved_first_ns="$(grep -m1 "^nameserver " /var/run/systemd/resolve/resolv.conf | awk '{print $2}')"
-    if [ "${resolved_first_ns}" == "127.0.0.1" ]; then
-        ok
-    else
-        err "systemd-resolved is not using local nameserver" \
-        "This system is using systemd-resolved." \
-        "If you have enabled a local dns server using NetworkManager or dnsmasq," \
-        "You will have to tell systemd-resolved to use it." \
-        "You can do this by adding the following lines in /etc/systemd/resolved.conf" \
-        "" \
-        "    DNS=127.0.0.1" \
-        "    Domains=\"~.\"" \
-        "" \
-        "and restarting systemd-resolved (systemctl restart systemd-resolved)."
-    fi
-else
-    err "First nameserver in /etc/resolv.conf is not pointing locally"
-fi
+first_ns_oct=$(echo "${first_ns}" | cut -d '.' -f 1)
+test "${first_ns_oct}" = "127" || err "First nameserver in /etc/resolv.conf is not pointing locally"
+ok
 
 
 echo -n "====> Creating a test host file for dnsmasq /etc/hosts.dnstest: "
@@ -73,7 +52,7 @@ echo -n "====> Reloading libvirt and dnsmasq: "
 reload_dns; ok
 
 failed=""
-for dns_host in ${resolved_first_ns} ${first_ns} ${LIBVIRT_GWIP} ""; do
+for dns_host in ${first_ns} ${LIBVIRT_GWIP} ""; do
     echo
     dig_dest=""
     test -n "${dns_host}" && dig_dest="@${dns_host}"

@@ -12,11 +12,8 @@ for x in virsh virt-install virt-customize systemctl dig wget
 do
     builtin type -P $x &> /dev/null || err "executable $x not found"
 done
-for f in "/usr/lib64/libvirt/connection-driver/libvirt_driver_network.so" \
-         "/usr/share/libvirt/networks/default.xml"
-do
-    test -e "$f" &> /dev/null || err "file $f not found"
-done
+test -n "$(find /usr -type f -name libvirt_driver_network.so 2> /dev/null)" || \
+	err "libvirt_driver_network.so not found"
 ok
 
 echo -n "====> Checking if the script/working directory already exists: "
@@ -37,11 +34,14 @@ test -z "$existing" || err "Found existing VM: $existing"
 ok
 
 echo -n "====> Checking if DNS service (dnsmasq or NetworkManager) is active: "
-if [ "$DNS_DIR" -ef "/etc/NetworkManager/dnsmasq.d" ]
+test -d "/etc/NetworkManager/dnsmasq.d" -o -d "/etc/dnsmasq.d" || err "No dnsmasq found"
+if [ "${DNS_DIR}" == "/etc/NetworkManager/dnsmasq.d" ]
 then
+    test -d "/etc/NetworkManager/dnsmasq.d" || err "/etc/NetworkManager/dnsmasq.d not found"
     DNS_SVC="NetworkManager"; DNS_CMD="reload";
-elif [ "$DNS_DIR" -ef "/etc/dnsmasq.d" ]
+elif [ "${DNS_DIR}" == "/etc/dnsmasq.d" ]
 then
+    test -d "/etc/dnsmasq.d" || err "/etc/dnsmasq.d not found"
     DNS_SVC="dnsmasq"; DNS_CMD="restart";
 else
     err "DNS_DIR (-z|--dns-dir), should be either /etc/dnsmasq.d or /etc/NetworkManager/dnsmasq.d"

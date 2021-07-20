@@ -27,11 +27,20 @@ fi
 
 if [ -n "$VIR_NET_OCT" ]; then
     echo -n "====> Creating a new libvirt network ocp-${VIR_NET_OCT}: "
-    test -f /usr/share/libvirt/networks/default.xml || err "/usr/share/libvirt/networks/default.xml not found"
-    /usr/bin/cp /usr/share/libvirt/networks/default.xml /tmp/new-net.xml > /dev/null || err "Network creation failed"
-    sed -i "s/default/ocp-${VIR_NET_OCT}/" /tmp/new-net.xml
-    sed -i "s/virbr0/ocp-${VIR_NET_OCT}/" /tmp/new-net.xml
-    sed -i "s/122/${VIR_NET_OCT}/g" /tmp/new-net.xml
+
+cat <<EOF > /tmp/new-net.xml
+<network>
+  <name>ocp-${VIR_NET_OCT}</name>
+  <bridge name="ocp-${VIR_NET_OCT}"/>
+  <forward/>
+  <ip address="192.168.${VIR_NET_OCT}.1" netmask="255.255.255.0">
+    <dhcp>
+      <range start="192.168.122.2" end="192.168.122.254"/>
+    </dhcp>
+  </ip>
+</network>
+EOF
+
     virsh net-define /tmp/new-net.xml > /dev/null || err "virsh net-define /tmp/new-net.xml failed"
     virsh net-autostart ocp-${VIR_NET_OCT} > /dev/null || err "virsh net-autostart ocp-${VIR_NET_OCT} failed"
     virsh net-start ocp-${VIR_NET_OCT} > /dev/null || err "virsh net-start ocp-${VIR_NET_OCT} failed"
