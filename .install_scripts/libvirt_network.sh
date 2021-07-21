@@ -7,6 +7,8 @@ echo "#######################"
 echo
 
 echo -n "====> Checking libvirt network: "
+test -n "$VIR_NET" -a -n "$VIR_NET_OCT" && err "Specify either -n or -N" 
+test -z "$VIR_NET" -a -z "$VIR_NET_OCT" && export VIR_NET="${DEF_LIBVIRT_NET}"
 if [ -n "$VIR_NET_OCT" ]; then
     virsh net-uuid "ocp-${VIR_NET_OCT}" &> /dev/null && \
         {   export VIR_NET="ocp-${VIR_NET_OCT}"
@@ -35,7 +37,7 @@ cat <<EOF > /tmp/new-net.xml
   <forward/>
   <ip address="192.168.${VIR_NET_OCT}.1" netmask="255.255.255.0">
     <dhcp>
-      <range start="192.168.122.2" end="192.168.122.254"/>
+      <range start="192.168.${VIR_NET_OCT}.2" end="192.168.${VIR_NET_OCT}.254"/>
     </dhcp>
   </ip>
 </network>

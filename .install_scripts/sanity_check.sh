@@ -24,6 +24,13 @@ test -d "${SETUP_DIR}" && \
         "You can also use --setup-dir to specify a different directory for this installation"
 ok
 
+echo -n "====> Checking for pull-secret (${PULL_SEC_F}): "
+test -f "${PULL_SEC_F}" \
+    && export PULL_SEC=$(cat ${PULL_SEC_F}) \
+    || err "Pull secret not found." \
+           "Please specify the pull secret file using -p or --pull-secret"
+ok
+
 echo -n "====> Checking if libvirt is running or enabled: "
     systemctl -q is-active libvirtd || systemctl -q is-enabled libvirtd || err "libvirtd is not running nor enabled"
 ok

@@ -13,20 +13,25 @@ cat <<EOF > env
 #
 # VARS:
 
-export LBIP="$LBIP"
-export WS_PORT="$WS_PORT"
-export IMAGE="$IMAGE"
-export CLUSTER_NAME="$CLUSTER_NAME"
-export VIR_NET="$VIR_NET"
-export DNS_DIR="$DNS_DIR"
-export VM_DIR="$VM_DIR"
-export SETUP_DIR="$SETUP_DIR"
-export BASE_DOM="$BASE_DOM"
-export DNS_CMD="$DNS_CMD"
-export DNS_SVC="$DNS_SVC"
-export RHCOS_LIVE="$RHCOS_LIVE"
-
+export SDIR="${SDIR}"
+export SETUP_DIR="${SETUP_DIR}"
+export DNS_DIR="${DNS_DIR}"
+export VM_DIR="${VM_DIR}"
 export KUBECONFIG="${SETUP_DIR}/install_dir/auth/kubeconfig"
+
+export CLUSTER_NAME="${CLUSTER_NAME}"
+export BASE_DOM="${BASE_DOM}"
+
+export LBIP="${LBIP}"
+export WS_PORT="${WS_PORT}"
+export IMAGE="${IMAGE}"
+export RHCOS_LIVE="${RHCOS_LIVE}"
+
+export VIR_NET="${VIR_NET}"
+export DNS_CMD="${DNS_CMD}"
+export DNS_SVC="${DNS_SVC}"
+
 EOF
+
 cp ${SDIR}/.post_scripts/*.sh ${SETUP_DIR}/
 

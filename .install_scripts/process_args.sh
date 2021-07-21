@@ -162,14 +162,5 @@ case $key in
 esac
 done
 
-test -f "$PULL_SEC_F" && export PULL_SEC=$(cat ${PULL_SEC_F}) \
-                      || err "Pull secret not found." \
-                             "Please specify the pull secret file using -p or --pull-secret"
-
-test -n "$VIR_NET" -a -n "$VIR_NET_OCT" && err "Specify either -n or -N" 
-test -z "$VIR_NET" -a -z "$VIR_NET_OCT" && export VIR_NET="${DEF_LIBVIRT_NET}"
-
-test -d "${CACHE_DIR}" || mkdir -p "${CACHE_DIR}"
-
 test -z "${SETUP_DIR}" && export SETUP_DIR="/root/ocp4_cluster_${CLUSTER_NAME}"
 

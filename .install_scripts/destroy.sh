@@ -35,7 +35,7 @@ if [ -n "$VIR_NET_OCT" ]; then
     fi
 fi
 
-if [ -d "$SETUP_DIR" ]; then
+if [ -d "${SETUP_DIR}" ]; then
     check_if_we_can_continue "Removing directory (rm -rf) $SETUP_DIR"
     echo -n "XXXX> Deleting (rm -rf) directory $SETUP_DIR: "
         rm -rf "$SETUP_DIR" || echo -n "Deleting directory failed (ignoring) ... "
