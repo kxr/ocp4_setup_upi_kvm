@@ -1,4 +1,4 @@
-# Automated OpenShift 4 Cluster Installation Script (Baremetal UPI on KVM)
+# Automated OpenShift 4 Cluster Installation on KVM
 
 ### Prerequistes:
 
