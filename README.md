@@ -3,7 +3,7 @@
 ### Prerequistes:
 
 - Internet connected physical host running a modern linux distribution
-- Virtualization enabled and Libvirt/KVM setup
+- Virtualization enabled and Libvirt/KVM setup [(more details)](https://github.com/kxr/ocp4_setup_upi_kvm/wiki/Setup-KVM-Libvirt)
 - DNS on the host managed by dnsmasq or NetworkManager/dnsmasq [(more details)](https://github.com/kxr/ocp4_setup_upi_kvm/wiki/Setting-Up-DNS)
 - OpenShift 4 Pull secret
 
