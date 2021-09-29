@@ -79,7 +79,7 @@ done
 ./openshift-install --dir=install_dir wait-for bootstrap-complete
 
 echo -n "====> Removing Boostrap VM: "
-if [ "${KEEP_BS}" == "yes" ]; then
+if [ "${KEEP_BS}" == "no" ]; then
     virsh destroy ${CLUSTER_NAME}-bootstrap > /dev/null || err "virsh destroy ${CLUSTER_NAME}-bootstrap failed"
     virsh undefine ${CLUSTER_NAME}-bootstrap --remove-all-storage > /dev/null || err "virsh undefine ${CLUSTER_NAME}-bootstrap --remove-all-storage"; ok
 else
