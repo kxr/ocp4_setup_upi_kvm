@@ -31,6 +31,8 @@ download() {
     test -n "${2}" && file="${2}" || err "Invalid download ${0} ${@}"
     test -n "${3}" && url="${3}"  || err "Invalid download ${0} ${@}"
 
+    mkdir -p "${CACHE_DIR}"
+
     if [ "${cmd}" == "check" ]
     then
         if [ -f "${CACHE_DIR}/${file}" ]; then

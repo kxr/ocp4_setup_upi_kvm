@@ -58,8 +58,8 @@ ok "${DNS_SVC}"
 
 if [ "${DNS_SVC}" == "NetworkManager" ]; then
     echo -n "====> Checking if dnsmasq is enabled in NetworkManager: "
-    cat /etc/NetworkManager/NetworkManager.conf /etc/NetworkManager/conf.d/* | grep -v "^#" | grep dnsmasq &> /dev/null
-    test "$?" -eq "0" || err "DNS Directory is set to NetworkManager but dnsmasq is not enabled in NetworkManager" \
+    find /etc/NetworkManager/ -name *.conf -exec cat {} \; | grep -v "^#" | grep dnsmasq &> /dev/null \
+    	|| err "DNS Directory is set to NetworkManager but dnsmasq is not enabled in NetworkManager" \
                              "See: https://github.com/kxr/ocp4_setup_upi_kvm/wiki/Setting-Up-DNS"
     ok
 fi
