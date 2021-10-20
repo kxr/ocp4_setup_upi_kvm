@@ -164,3 +164,5 @@ done
 
 test -z "${SETUP_DIR}" && export SETUP_DIR="/root/ocp4_cluster_${CLUSTER_NAME}"
 
+test -n "$VIR_NET" -a -n "$VIR_NET_OCT" && err "Specify either -n or -N" 
+test -z "$VIR_NET" -a -z "$VIR_NET_OCT" && export VIR_NET="${DEF_LIBVIRT_NET}"
