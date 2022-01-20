@@ -23,13 +23,13 @@ else
     fi
 fi
 echo -n "====> Looking up OCP4 client for release $urldir: "
-CLIENT=$(curl -N --fail -qs "${OCP_MIRROR}/${urldir}/" | grep  -m1 "client-linux" | sed 's/.*href="\(openshift-.*\)">open.*/\1/')
+CLIENT=$(curl -N --fail -qs "${OCP_MIRROR}/${urldir}/" | grep  -m1 "client-linux" | sed 's/.*href="\(openshift-.*\)">.*/\1/')
     test -n "$CLIENT" || err "No client found in ${OCP_MIRROR}/${urldir}/"; ok "$CLIENT"
 CLIENT_URL="${OCP_MIRROR}/${urldir}/${CLIENT}"
 echo -n "====> Checking if Client URL is downloadable: "; download check "$CLIENT" "$CLIENT_URL";
 
 echo -n "====> Looking up OCP4 installer for release $urldir: "
-INSTALLER=$(curl -N --fail -qs "${OCP_MIRROR}/${urldir}/" | grep  -m1 "install-linux" | sed 's/.*href="\(openshift-.*\)">open.*/\1/')
+INSTALLER=$(curl -N --fail -qs "${OCP_MIRROR}/${urldir}/" | grep  -m1 "install-linux" | sed 's/.*href="\(openshift-.*\)">.*/\1/')
     test -n "$INSTALLER" || err "No installer found in ${OCP_MIRROR}/${urldir}/"; ok "$INSTALLER"
 INSTALLER_URL="${OCP_MIRROR}/${urldir}/${INSTALLER}"
 echo -n "====> Checking if Installer URL is downloadable: ";  download check "$INSTALLER" "$INSTALLER_URL";
@@ -55,13 +55,13 @@ else
 fi
 
 echo -n "====> Looking up RHCOS kernel for release $RHCOS_VER/$urldir: "
-KERNEL=$(curl -N --fail -qs "${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/" | grep -m1 "installer-kernel\|live-kernel" | sed 's/.*href="\(rhcos-.*\)">rhcos.*/\1/')
+KERNEL=$(curl -N --fail -qs "${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/" | grep -m1 "installer-kernel\|live-kernel" | sed 's/.*href="\(rhcos-.*\)">.*/\1/')
     test -n "$KERNEL" || err "No kernel found in ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/"; ok "$KERNEL"
 KERNEL_URL="${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/${KERNEL}"
 echo -n "====> Checking if Kernel URL is downloadable: "; download check "$KERNEL" "$KERNEL_URL";
 
 echo -n "====> Looking up RHCOS initramfs for release $RHCOS_VER/$urldir: "
-INITRAMFS=$(curl -N --fail -qs ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/ | grep -m1 "installer-initramfs\|live-initramfs" | sed 's/.*href="\(rhcos-.*\)">rhcos.*/\1/')
+INITRAMFS=$(curl -N --fail -qs ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/ | grep -m1 "installer-initramfs\|live-initramfs" | sed 's/.*href="\(rhcos-.*\)">.*/\1/')
     test -n "$INITRAMFS" || err "No initramfs found in ${RHCOS_MIRROR}/${RHCOS_VER}/${urldir}/"; ok "$INITRAMFS"
 INITRAMFS_URL="$RHCOS_MIRROR/${RHCOS_VER}/${urldir}/${INITRAMFS}"
 echo -n "====> Checking if Initramfs URL is downloadable: "; download check "$INITRAMFS" "$INITRAMFS_URL";
