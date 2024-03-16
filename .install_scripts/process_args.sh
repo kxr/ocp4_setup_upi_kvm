@@ -52,6 +52,11 @@ case $key in
     shift
     shift
     ;;
+    -t|--network-type)
+    export NETWORK_TYPE="$2"
+    shift
+    shift
+    ;;
     -v|--vm-dir)
     export VM_DIR="$2"
     shift

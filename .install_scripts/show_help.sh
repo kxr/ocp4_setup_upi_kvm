@@ -31,6 +31,11 @@ Options:
     This will be used to populate .baseDomain in the install-config.yaml file that will be used to install the cluster.
     Default: ${BASE_DOM}
 
+-t, --network-type TYPE
+    OpenShift 4 cluster network type.
+    This will be used to populate .networking.networkType in the install-config.yaml file that will be used to install the cluster.
+    Default: ${NETWORK_TYPE}
+
 -m, --masters N
     Number of master nodes to deploy.
     Default: ${N_MAST}
