@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo 
+echo
 echo "#####################################################"
 echo "### DOWNLOAD AND PREPARE OPENSHIFT 4 INSTALLATION ###"
 echo "#####################################################"
@@ -29,7 +29,7 @@ elif [ -f "${SSH_PUB_KEY_FILE}" ]; then
 else
     err "Unable to select SSH public key!"
 fi
-    
+
 
 echo -n "====> Downloading OCP Client: "; download get "$CLIENT" "$CLIENT_URL";
 echo -n "====> Downloading OCP Installer: "; download get "$INSTALLER" "$INSTALLER_URL";
@@ -73,7 +73,7 @@ networking:
   clusterNetworks:
   - cidr: 10.128.0.0/14
     hostPrefix: 23
-  networkType: OpenShiftSDN
+  networkType: ${NETWORK_TYPE}
   serviceNetwork:
   - 172.30.0.0/16
 platform:

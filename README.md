@@ -25,6 +25,7 @@
 | -p, --pull-secret FILE | Location of the pull secret file<br>Default: /root/pull-secret |
 | -c, --cluster-name NAME | OpenShift 4 cluster name<br>Default: ocp4 |
 | -d, --cluster-domain DOMAIN | OpenShift 4 cluster domain<br>Default: local |
+| -t, --network-type TYPE | OpenShift 4 cluster network type<br>Default: OpenShiftSDN |
 | -m, --masters N | Number of masters to deploy<br>Default: 3 |
 | -w, --worker N | Number of workers to deploy<br>Default: 2 |
 | --master-cpu N | Number of CPUs for the master VM(s)<br>Default: 4 |
@@ -68,6 +69,10 @@
     # Deploy OpenShift 4.2.stable on new libvirt network (192.168.155.0/24)
     ./ocp4_setup_upi_kvm.sh --ocp-version 4.2.stable --libvirt-oct 155
     ./ocp4_setup_upi_kvm.sh -O 4.2.stable -N 155
+
+    # Deploy OpenShift 4.15.stable with OVNKubernetes network type
+    ./ocp4_setup_upi_kvm.sh --ocp-version 4.15.stable --network-type OVNKubernetes
+    ./ocp4_setup_upi_kvm.sh -O 4.15.stable -t OVNKubernetes
 
     # Destory the already installed cluster
     ./ocp4_setup_upi_kvm.sh --cluster-name ocp43 --cluster-domain lab.test.com --destroy
@@ -158,7 +163,7 @@ for vm in $(virsh list --all --name --autostart | grep "<CLUSTER-NAME>"); do
 done
 ~~~
 
-Note: Replace `<CLUSTER-NAME>` with the cluster name or any matching string to filter out VMs that you want to set/un-set to be auto-started. 
+Note: Replace `<CLUSTER-NAME>` with the cluster name or any matching string to filter out VMs that you want to set/un-set to be auto-started.
 
 ___
 
@@ -177,7 +182,7 @@ When the bootstrap process is complete, the script waits for clusterversion to b
 ~~~
 
 ~~~
-====> Waiting for clusterversion: 
+====> Waiting for clusterversion:
   --> Working towards 4.3.12: 46% complete
   --> Unable to apply 4.3.12: an unknown error has occurred
   --> Working towards 4.3.12: 61% complete

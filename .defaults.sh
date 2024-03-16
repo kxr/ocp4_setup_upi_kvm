@@ -54,6 +54,9 @@ export CLUSTER_NAME="ocp4"
 # -d, --cluster-domain DOMAIN
 export BASE_DOM="local"
 
+# -t, --network-type TYPE
+export NETWORK_TYPE="OpenShiftSDN"
+
 # -z, --dns-dir DIR
 export DNS_DIR="/etc/NetworkManager/dnsmasq.d"
 
